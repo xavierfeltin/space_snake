@@ -1,3 +1,6 @@
+import { UpdateContext } from "./update_context";
+import { FrameTime } from "./components/frame_time";
+
 let lastId = 0;
 const nextId = () => `${++lastId}`;
 type EntityID = string;
@@ -9,13 +12,15 @@ export interface IComponent {
 
 export interface System<T> {
     readonly name: string;
-    onUpdate: (entityManager: EntityManager<T>, context: T) => void
+    onUpdate: (entityManager: EntityManager<T>, context: UpdateContext) => void;
 }
 
 export class EntityManager<T> {
   private entities = new Set<EntityID>();
   private entityComponentsMap = new Map<EntityID, Map<ComponentKind, IComponent>>();
-  private systems = new Map<string, System<T>>();
+  private actionSystems = new Map<string, System<T>>();
+  private physicSystems = new Map<string, System<T>>();
+  private renderingSystems = new Map<string, System<T>>();
 
   public addEntity(components?: IComponent[]): EntityID {
     const id = nextId();
@@ -24,6 +29,12 @@ export class EntityManager<T> {
     this.addComponents(id, ...(components || []));
 
     return id;
+  }
+
+  public addGlobalEntity(entityId: EntityID, component: IComponent): EntityID {
+    this.entities.add(entityId);
+    this.addComponents(entityId, ...[component]);
+    return entityId;
   }
 
   public removeEntity(entity: EntityID): void {
@@ -89,17 +100,73 @@ export class EntityManager<T> {
     return result;
   }
 
-  public addSystem(system: System<T>): void {
-    this.systems.set(system.name, system);
+  public selectGlobal(entityId: EntityID): Map<EntityID, IComponent>  {
+    const map = new Map <EntityID, IComponent> ();
+    const components = this.entityComponentsMap.get(entityId);
+
+    if (components) {
+      map.set(entityId, Array.from(components.values())[0]);
+    }
+
+    return map;
+  }
+
+  public addSystem(system: System<T>, type: string): void {
+    switch(type)
+    {
+      case 'Action':
+        this.actionSystems.set(system.name, system);
+        break;
+      case 'Physics':
+        this.physicSystems.set(system.name, system);
+        break;
+      case 'Rendering':
+          this.renderingSystems.set(system.name, system);
+          break;
+      default:
+        console.log('type is not valid for system ' + system.name);
+    }
     console.log('add system ' + system.name);
   }
 
   public removeSystem(systemName: string): void {
-    this.systems.delete(systemName);
+    if (this.actionSystems.has(systemName)) {
+      this.actionSystems.delete(systemName);
+    }
+
+    if (this.physicSystems.has(systemName)) {
+      this.physicSystems.delete(systemName);
+    }
+
+    if (this.renderingSystems.has(systemName)) {
+      this.renderingSystems.delete(systemName);
+    }
   }
 
-  public update(context: T): void {
-    for(let system of this.systems.values()) {
+  public update(context: UpdateContext): void {
+
+    // Action engine
+    for(let system of this.actionSystems.values()) {
+      system.onUpdate(this, context);
+    }
+
+    // Physical engine
+    const frameEntity = this.selectGlobal('frame');
+    const frameTime = frameEntity.get('frame') as FrameTime;
+    let t = frameTime.time;
+    while (t <= 1.0)
+    {
+      for(let system of this.physicSystems.values()) {
+        system.onUpdate(this, context);
+      }
+
+      const frameEntity = this.selectGlobal('frame');
+      const frameTime = frameEntity.get('frame') as FrameTime;
+      t = frameTime.time;
+    }
+
+    // Render phase
+    for(let system of this.renderingSystems.values()) {
       system.onUpdate(this, context);
     }
   }

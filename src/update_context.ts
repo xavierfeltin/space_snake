@@ -1,4 +1,5 @@
 export interface UpdateContext {
   deltaTime: number;
-  canvas2D: CanvasRenderingContext2D
+  time: number;
+  canvas2D: CanvasRenderingContext2D;
 }

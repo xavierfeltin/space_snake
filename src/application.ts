@@ -12,11 +12,16 @@ import { Renderer } from "./components/renderer";
 import { RenderShip } from "./systems/render_ship";
 import { RenderBeacon } from "./systems/render_beacon";
 import { Orientate } from "./systems/orientate";
-import { UpdateInstruments } from "./systems/update_instruments";
 import { Solve } from "./systems/solve";
 import { Turn } from "./systems/turn";
 import { Speed } from "./components/speed";
 import { Radar } from "./components/radar";
+import { RenderRadar } from "./systems/render_radar";
+import { RigidBody } from "./components/rigid_body";
+import { Collisions } from "./components/collision";
+import { DetectCollisions } from "./systems/detect_collisions";
+import { Collide } from "./systems/collide";
+import { FrameTime } from "./components/frame_time";
 
 export class Application {
     private em: EntityManager<UpdateContext>;
@@ -44,14 +49,17 @@ export class Application {
         this.interval = 1000 / this.fps;
 
         this.em = new EntityManager<UpdateContext>();
-        this.em.addSystem(new Solve());
-        this.em.addSystem(new Turn());
-        this.em.addSystem(new Orientate());
-        this.em.addSystem(new Move());
-        this.em.addSystem(new UpdateInstruments());
-        this.em.addSystem(new RenderArea());
-        this.em.addSystem(new RenderBeacon());
-        this.em.addSystem(new RenderShip());
+        this.em.addSystem(new Solve(), 'Physics');
+        this.em.addSystem(new Turn(), 'Physics');
+        this.em.addSystem(new Orientate(), 'Physics');
+        this.em.addSystem(new DetectCollisions, 'Physics');
+        this.em.addSystem(new Move(), 'Physics');
+        this.em.addSystem(new Collide, 'Physics');
+
+        this.em.addSystem(new RenderArea(), 'Rendering');
+        this.em.addSystem(new RenderBeacon(), 'Rendering');
+        this.em.addSystem(new RenderShip(), 'Rendering');
+        this.em.addSystem(new RenderRadar(), 'Rendering');
 
         this.idArea = this.em.addEntity([
             new Area(1200, 800),
@@ -66,15 +74,21 @@ export class Application {
             new Position([400, 400]),
             new Velocity([1, 0]),
             new Orientation(0),
-            new Radar(100, 5, 6, [400, 400])
+            new Radar(100, 5, 6),
+            new RigidBody(20)
         ]);
 
         // this one will be static
         this.id2 = this.em.addEntity([
             new Beacon(),
             new Position([200, 100]),
+            new RigidBody(20),
             new Renderer('(0,0,0)', 100, 100)
         ]);
+
+        // Global entities
+        const idFrame = this.em.addGlobalEntity('frame', new FrameTime);
+        const idCollisions = this.em.addGlobalEntity('collisions', new Collisions);
     }
 
     public run(): void {
@@ -104,6 +118,7 @@ export class Application {
 
             this.em.update({
                 deltaTime: this.interval,
+                time: 0.0,
                 canvas2D: this.canvas2D
             });
         }
