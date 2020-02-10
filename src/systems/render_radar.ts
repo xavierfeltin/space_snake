@@ -20,8 +20,8 @@ export class RenderRadar implements System<UpdateContext> {
   }
 
   private render(radar: Radar, pos: Position, ctx: CanvasRenderingContext2D) {
-    const x = pos.position[0];
-    const y = pos.position[1];
+    const x = pos.position.x;
+    const y = pos.position.y;
 
     const angleMainSection = Math.ceil(360 / radar.sections);
     const distBtwLayers = Math.ceil(radar.radius / radar.layers);

@@ -22,6 +22,8 @@ import { Collisions } from "./components/collision";
 import { DetectCollisions } from "./systems/detect_collisions";
 import { Collide } from "./systems/collide";
 import { FrameTime } from "./components/frame_time";
+import { Vect2D } from "./utils/vect2D";
+import { Clean } from "./systems/clean";
 
 export class Application {
     private em: EntityManager<UpdateContext>;
@@ -55,6 +57,7 @@ export class Application {
         this.em.addSystem(new DetectCollisions, 'Physics');
         this.em.addSystem(new Move(), 'Physics');
         this.em.addSystem(new Collide, 'Physics');
+        this.em.addSystem(new Clean, 'Physics');
 
         this.em.addSystem(new RenderArea(), 'Rendering');
         this.em.addSystem(new RenderBeacon(), 'Rendering');
@@ -63,7 +66,7 @@ export class Application {
 
         this.idArea = this.em.addEntity([
             new Area(1200, 800),
-            new Position([0, 0]),
+            new Position(new Vect2D(0, 0)),
             new Renderer('(0,0,0)', 1200, 800)
         ])
 
@@ -71,8 +74,8 @@ export class Application {
         this.id1 = this.em.addEntity([
             new Ship(),
             new Speed(10),
-            new Position([400, 400]),
-            new Velocity([1, 0]),
+            new Position(new Vect2D(400, 400)),
+            new Velocity(new Vect2D(1, 0)),
             new Orientation(0),
             new Radar(100, 5, 6),
             new RigidBody(20)
@@ -81,7 +84,25 @@ export class Application {
         // this one will be static
         this.id2 = this.em.addEntity([
             new Beacon(),
-            new Position([200, 100]),
+            new Position(new Vect2D(200, 100)),
+            new Velocity(new Vect2D(0, 0)),
+            new RigidBody(20),
+            new Renderer('(0,0,0)', 100, 100)
+        ]);
+
+        // this one will be static
+        const id3 = this.em.addEntity([
+            new Beacon(),
+            new Position(new Vect2D(600, 400)),
+            new Velocity(new Vect2D(0, 0)),
+            new RigidBody(20),
+            new Renderer('(0,0,0)', 100, 100)
+        ]);
+
+        const id4 = this.em.addEntity([
+            new Beacon(),
+            new Position(new Vect2D(450, 400)),
+            new Velocity(new Vect2D(0, 0)),
             new RigidBody(20),
             new Renderer('(0,0,0)', 100, 100)
         ]);
@@ -89,6 +110,7 @@ export class Application {
         // Global entities
         const idFrame = this.em.addGlobalEntity('frame', new FrameTime);
         const idCollisions = this.em.addGlobalEntity('collisions', new Collisions);
+        const idPrevCollisions = this.em.addGlobalEntity('previousCollision', new Collisions);
     }
 
     public run(): void {

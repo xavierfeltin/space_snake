@@ -1,7 +1,6 @@
 import { EntityManager, System } from '../ecs_engine';
 import { UpdateContext } from '../update_context';
 import { Orientation } from '../components/orientation';
-import { Position } from '../components/position';
 import { Velocity } from '../components/velocity';
 import { Speed } from '../components/speed';
 
@@ -11,7 +10,6 @@ export class Orientate implements System<UpdateContext> {
   onUpdate(em: EntityManager<UpdateContext>, context: UpdateContext): void {
     const entities = em.select(['Orientation', 'Velocity', 'Speed']);
 
-    debugger;
     for (let [entity, componentsMap] of entities.entries()) {
         const orientation = componentsMap.get('Orientation') as Orientation;
         const speed = componentsMap.get('Speed') as Speed;
@@ -21,10 +19,11 @@ export class Orientate implements System<UpdateContext> {
         const vx = Math.cos(rad);
         const vy = Math.sin(rad);
 
+        orientation.heading.x = vx
+        orientation.heading.y = vy;
 
-        orientation.heading = [vx, vy];
-
-        vel.velocity = [vx * speed.value, vy * speed.value];
+        vel.velocity.x = vx * speed.value
+        vel.velocity.y = vy * speed.value;
 
         em.addComponents(entity, orientation);
         em.addComponents(entity, vel);

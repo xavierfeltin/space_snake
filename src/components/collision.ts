@@ -1,5 +1,5 @@
 import { IComponent } from '../ecs_engine';
-import { Collision } from '../utils/utls';
+import { Collision } from '../utils/collision';
 
 export class Collisions implements IComponent {
     kind = 'Collisions';

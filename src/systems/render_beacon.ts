@@ -17,8 +17,8 @@ export class RenderBeacon implements System<UpdateContext> {
   }
 
   private render(pos: Position, ctx: CanvasRenderingContext2D) {
-    const x = pos.position[0];
-    const y = pos.position[1];
+    const x = pos.position.x;
+    const y = pos.position.y;
     const w = 40;
     const h = 40;
     const transX = w / 2;

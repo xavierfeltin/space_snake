@@ -1,5 +1,4 @@
 import { IComponent } from '../ecs_engine';
-import { Vector2 } from '../utils/utls';
 
 export class Radar implements IComponent {
   kind = 'Radar';

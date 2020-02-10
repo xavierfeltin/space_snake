@@ -1,11 +1,11 @@
 import { IComponent } from '../ecs_engine';
-import { Vector2 } from '../utils/utls';
+import { Vect2D } from '../utils/vect2D';
 
 export class Velocity implements IComponent {
   kind = 'Velocity';
 
-  public velocity: Vector2;
-  constructor(public vel: Vector2) {
+  public velocity: Vect2D;
+  constructor(public vel: Vect2D) {
     this.velocity = vel;
   }
 }

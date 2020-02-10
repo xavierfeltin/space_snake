@@ -1,5 +1,6 @@
 import { UpdateContext } from "./update_context";
 import { FrameTime } from "./components/frame_time";
+import { Collisions } from "./components/collision";
 
 let lastId = 0;
 const nextId = () => `${++lastId}`;
@@ -151,18 +152,24 @@ export class EntityManager<T> {
     }
 
     // Physical engine
-    const frameEntity = this.selectGlobal('frame');
-    const frameTime = frameEntity.get('frame') as FrameTime;
-    let t = frameTime.time;
-    while (t <= 1.0)
+    let frameEntity = this.selectGlobal('frame');
+    let frameTime = frameEntity.get('frame') as FrameTime;
+    frameTime.time = 0;
+    this.addComponents('frame', frameTime);
+
+    // Reset collision history for the new frame
+    const previousCollisionEntity = this.selectGlobal('previousCollision');
+    const prevCollision = previousCollisionEntity.get('previousCollision') as Collisions;
+    prevCollision.collisions = [];
+    this.addComponents('previousCollision', prevCollision);
+
+    while (frameTime.time < 1.0)
     {
       for(let system of this.physicSystems.values()) {
         system.onUpdate(this, context);
       }
 
-      const frameEntity = this.selectGlobal('frame');
-      const frameTime = frameEntity.get('frame') as FrameTime;
-      t = frameTime.time;
+      frameTime = frameEntity.get('frame') as FrameTime;
     }
 
     // Render phase

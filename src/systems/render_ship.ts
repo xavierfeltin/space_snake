@@ -18,8 +18,8 @@ export class RenderShip implements System<UpdateContext> {
   }
 
   private render(pos: Position, orientation: Orientation, ctx: CanvasRenderingContext2D) {
-    const x = pos.position[0];
-    const y = pos.position[1];
+    const x = pos.position.x;
+    const y = pos.position.y;
     const w = 40;
     const h = 40;
     const angle = orientation.angle;
