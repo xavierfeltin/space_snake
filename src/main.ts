@@ -10,6 +10,7 @@ if (mainDiv) {
 
 if (canvas && canvas.getContext) {
   const ctx = canvas.getContext('2d');
+
   if (ctx) {
     const app = new Application(ctx);
     app.run();

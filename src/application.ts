@@ -24,6 +24,11 @@ import { Collide } from "./systems/collide";
 import { FrameTime } from "./components/frame_time";
 import { Vect2D } from "./utils/vect2D";
 import { Clean } from "./systems/clean";
+import { RenderScore } from "./systems/render_score";
+import { Score } from "./components/score";
+import { Inputs } from "./components/inputs";
+
+let gApplication: Application;
 
 export class Application {
     private em: EntityManager<UpdateContext>;
@@ -49,9 +54,11 @@ export class Application {
         this.then = 0;
         this.fps = 30;
         this.interval = 1000 / this.fps;
+        gApplication = this;
 
         this.em = new EntityManager<UpdateContext>();
-        this.em.addSystem(new Solve(), 'Physics');
+        this.em.addSystem(new Solve(), 'Action');
+
         this.em.addSystem(new Turn(), 'Physics');
         this.em.addSystem(new Orientate(), 'Physics');
         this.em.addSystem(new DetectCollisions, 'Physics');
@@ -63,12 +70,13 @@ export class Application {
         this.em.addSystem(new RenderBeacon(), 'Rendering');
         this.em.addSystem(new RenderShip(), 'Rendering');
         this.em.addSystem(new RenderRadar(), 'Rendering');
+        this.em.addSystem(new RenderScore(), 'Rendering');
 
         this.idArea = this.em.addEntity([
             new Area(1200, 800),
             new Position(new Vect2D(0, 0)),
             new Renderer('(0,0,0)', 1200, 800)
-        ])
+        ]);
 
         // this one will move
         this.id1 = this.em.addEntity([
@@ -78,7 +86,8 @@ export class Application {
             new Velocity(new Vect2D(1, 0)),
             new Orientation(0),
             new Radar(100, 5, 6),
-            new RigidBody(20)
+            new RigidBody(20),
+            new Score()
         ]);
 
         // this one will be static
@@ -111,6 +120,7 @@ export class Application {
         const idFrame = this.em.addGlobalEntity('frame', new FrameTime);
         const idCollisions = this.em.addGlobalEntity('collisions', new Collisions);
         const idPrevCollisions = this.em.addGlobalEntity('previousCollision', new Collisions);
+        const idInputs = this.em.addGlobalEntity('inputs', new Inputs);
     }
 
     public run(): void {
@@ -122,8 +132,21 @@ export class Application {
         // yes I know could be better ...
         //this.initialize();
         //this.game.start();
-
+        document.addEventListener('keydown', this.registerHumanAction, false);
         window.requestAnimationFrame(() => this.animate());
+    }
+
+    private registerHumanAction(e: KeyboardEvent) {
+
+        const inputsEntity = gApplication.em.selectGlobal('inputs');
+        const inputs = inputsEntity.get('inputs') as Inputs;
+        if (e.keyCode === 37) {
+            inputs.addInput('left');
+        }
+        else if (e.keyCode === 39) {
+            inputs.addInput('right');
+        }
+        gApplication.em.addComponents('inputs', inputs);
     }
 
     private animate(): void {
