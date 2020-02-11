@@ -8,6 +8,7 @@ import { Collision } from '../utils/collision';
 import { CollisionHelper } from '../utils/collision';
 import { Velocity } from '../components/velocity';
 import { Vect2D } from '../utils/vect2D';
+import { Area } from '../components/area';
 
 export class DetectCollisions implements System<UpdateContext> {
   name = 'DetectCollisions';
@@ -15,14 +16,10 @@ export class DetectCollisions implements System<UpdateContext> {
   onUpdate(em: EntityManager<UpdateContext>, context: UpdateContext): void {
     const entities = em.select(['RigidBody', 'Position', 'Velocity'], ['HasToBeDeleted']);
 
-    const collisionEntity = em.selectGlobal('collisions');
-    const collisions = collisionEntity.get('collisions') as Collisions;
-
-    const previousCollisionEntity = em.selectGlobal('previousCollision');
-    const prevCollision = previousCollisionEntity.get('previousCollision') as Collisions;
-
-    const frameEntity = em.selectGlobal('frame');
-    const frameTime = frameEntity.get('frame') as FrameTime;
+    const collisions = em.selectGlobal('collisions')?.get('Collisions') as Collisions;
+    const prevCollision = em.selectGlobal('previousCollision')?.get('Collisions') as Collisions;
+    const frameTime = em.selectGlobal('frame')?.get('FrameTime') as FrameTime;
+    const area = em.selectGlobal('area')?.get('Area') as Area;
 
     let firstCollision: Collision = CollisionHelper.createEmptyCollision();
     /*
@@ -36,6 +33,7 @@ export class DetectCollisions implements System<UpdateContext> {
         const posA = componentsMapA.get('Position') as Position;
         const velA = componentsMapA.get('Velocity') as Velocity;
 
+        // Collision with other objects
         for (let [entityB, componentsMapB] of entities.entries()) {
           const rbB = componentsMapB.get('RigidBody') as RigidBody;
           const posB = componentsMapB.get('Position') as Position;
@@ -68,6 +66,13 @@ export class DetectCollisions implements System<UpdateContext> {
               firstCollision = newCollision;
             }
           }
+        }
+
+        // Collision with area
+        if (posA.position.x - rbA.radius < 0.0 || posA.position.x + rbA.radius > area.width
+          || posA.position.y - rbA.radius < 0.0 || posA.position.y + rbA.radius > area.height) {
+            const collision = CollisionHelper.createCollision(entityA, 'area', posA.position, new Vect2D(0,0), velA.velocity, new Vect2D(0, 0), rbA.radius, 0, 0);
+            firstCollision = collision;
         }
     }
 

@@ -1,6 +1,7 @@
 import { UpdateContext } from "./update_context";
 import { FrameTime } from "./components/frame_time";
 import { Collisions } from "./components/collision";
+import { Collision } from "./utils/utls";
 
 let lastId = 0;
 const nextId = () => `${++lastId}`;
@@ -32,9 +33,11 @@ export class EntityManager<T> {
     return id;
   }
 
-  public addGlobalEntity(entityId: EntityID, component: IComponent): EntityID {
-    this.entities.add(entityId);
-    this.addComponents(entityId, ...[component]);
+  public addGlobalEntity(entityId: EntityID, components: IComponent[]): EntityID {
+    if (!this.entities.has(entityId)) {
+      this.entities.add(entityId);
+      this.addComponents(entityId, ...(components || []));
+    }
     return entityId;
   }
 
@@ -101,15 +104,17 @@ export class EntityManager<T> {
     return result;
   }
 
-  public selectGlobal(entityId: EntityID): Map<EntityID, IComponent>  {
-    const map = new Map <EntityID, IComponent> ();
+  public selectGlobal(entityId: EntityID): Map<ComponentKind, IComponent> | undefined{
+    //const map = new Map <EntityID, IComponent> ();
     const components = this.entityComponentsMap.get(entityId);
 
+    /*
     if (components) {
       map.set(entityId, Array.from(components.values())[0]);
     }
+    */
 
-    return map;
+    return components;
   }
 
   public addSystem(system: System<T>, type: string): void {
@@ -152,14 +157,12 @@ export class EntityManager<T> {
     }
 
     // Physical engine
-    let frameEntity = this.selectGlobal('frame');
-    let frameTime = frameEntity.get('frame') as FrameTime;
+    let frameTime = this.selectGlobal('frame')?.get('FrameTime') as FrameTime;
     frameTime.time = 0;
     this.addComponents('frame', frameTime);
 
     // Reset collision history for the new frame
-    const previousCollisionEntity = this.selectGlobal('previousCollision');
-    const prevCollision = previousCollisionEntity.get('previousCollision') as Collisions;
+    const prevCollision = this.selectGlobal('previousCollision')?.get('Collisions') as Collisions;
     prevCollision.collisions = [];
     this.addComponents('previousCollision', prevCollision);
 
@@ -169,7 +172,7 @@ export class EntityManager<T> {
         system.onUpdate(this, context);
       }
 
-      frameTime = frameEntity.get('frame') as FrameTime;
+      frameTime = this.selectGlobal('frame')?.get('FrameTime') as FrameTime;
     }
 
     // Render phase

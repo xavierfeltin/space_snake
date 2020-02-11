@@ -11,8 +11,7 @@ export class Move implements System<UpdateContext> {
   onUpdate(em: EntityManager<UpdateContext>, context: UpdateContext): void {
     const entities = em.select(['Position', 'Velocity']);
 
-    const frameEntity = em.selectGlobal('frame');
-    const frameTime = frameEntity.get('frame') as FrameTime;
+    const frameTime = em.selectGlobal('frame')?.get('FrameTime') as FrameTime;
     const time = frameTime.time;
 
     for (let [entity, componentsMap] of entities.entries()) {

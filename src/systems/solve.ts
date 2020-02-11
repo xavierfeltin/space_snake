@@ -7,9 +7,8 @@ export class Solve implements System<UpdateContext> {
   name = 'Solve';
 
   onUpdate(em: EntityManager<UpdateContext>, context: UpdateContext): void {
-    const inputsEntity = em.selectGlobal('inputs');
+    const inputs = em.selectGlobal('inputs')?.get('Inputs') as Inputs;
     const entities = em.select(['Ship']);
-    const inputs = inputsEntity.get('inputs') as Inputs;
 
     for (let [entity, componentsMap] of entities.entries()) {
       for (let input of inputs.inputs)

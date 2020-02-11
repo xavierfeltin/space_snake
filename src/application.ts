@@ -27,6 +27,7 @@ import { Clean } from "./systems/clean";
 import { RenderScore } from "./systems/render_score";
 import { Score } from "./components/score";
 import { Inputs } from "./components/inputs";
+import { GameState } from "./components/game_state";
 
 let gApplication: Application;
 
@@ -117,10 +118,16 @@ export class Application {
         ]);
 
         // Global entities
-        const idFrame = this.em.addGlobalEntity('frame', new FrameTime);
-        const idCollisions = this.em.addGlobalEntity('collisions', new Collisions);
-        const idPrevCollisions = this.em.addGlobalEntity('previousCollision', new Collisions);
-        const idInputs = this.em.addGlobalEntity('inputs', new Inputs);
+        const idFrame = this.em.addGlobalEntity('frame', [new FrameTime]);
+        const idCollisions = this.em.addGlobalEntity('collisions', [new Collisions]);
+        const idPrevCollisions = this.em.addGlobalEntity('previousCollision', [new Collisions]);
+        const idInputs = this.em.addGlobalEntity('inputs', [new Inputs]);
+        const idArea = this.em.addGlobalEntity('area', [
+            new Area(1200, 800),
+            new Position(new Vect2D(0, 0)),
+            new Renderer('(0,0,0)', 1200, 800)
+        ]);
+        const idGame = this.em.addGlobalEntity('gameState', [new GameState]);
     }
 
     public run(): void {
@@ -138,8 +145,7 @@ export class Application {
 
     private registerHumanAction(e: KeyboardEvent) {
 
-        const inputsEntity = gApplication.em.selectGlobal('inputs');
-        const inputs = inputsEntity.get('inputs') as Inputs;
+        const inputs = gApplication.em.selectGlobal('inputs')?.get('Inputs') as Inputs;
         if (e.keyCode === 37) {
             inputs.addInput('left');
         }
@@ -150,22 +156,25 @@ export class Application {
     }
 
     private animate(): void {
-        window.requestAnimationFrame(() => this.animate());
+        const game = this.em.selectGlobal('gameState')?.get('GameState') as GameState;
+        if (game.isRunning()) {
+            window.requestAnimationFrame(() => this.animate());
 
-        this.now = Date.now();
-        this.delta = this.now - this.then;
+            this.now = Date.now();
+            this.delta = this.now - this.then;
 
-        if (this.delta > this.interval) {
-            // update time stuffs
+            if (this.delta > this.interval) {
+                // update time stuffs
 
-            // From: http://codetheory.in/controlling-the-frame-rate-with-requestanimationframe/
-            this.then = this.now - (this.delta % this.interval);
+                // From: http://codetheory.in/controlling-the-frame-rate-with-requestanimationframe/
+                this.then = this.now - (this.delta % this.interval);
 
-            this.em.update({
-                deltaTime: this.interval,
-                time: 0.0,
-                canvas2D: this.canvas2D
-            });
+                this.em.update({
+                    deltaTime: this.interval,
+                    time: 0.0,
+                    canvas2D: this.canvas2D
+                });
+            }
         }
     }
 }

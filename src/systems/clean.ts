@@ -9,7 +9,7 @@ export class Clean implements System<UpdateContext> {
     const entities = em.select(['HasToBeDeleted']);
 
     for (let [entity, componentsMap] of entities.entries()) {
-        em.removeEntity(entity);
+      em.removeEntity(entity);
     }
   }
 }

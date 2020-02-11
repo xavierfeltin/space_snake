@@ -15,11 +15,8 @@ export class Collide implements System<UpdateContext> {
   name = 'Collide';
 
   onUpdate(em: EntityManager<UpdateContext>, context: UpdateContext): void {
-    const collisionEntity = em.selectGlobal('collisions');
-    const collisions = collisionEntity.get('collisions') as Collisions;
-
-    const previousCollisionEntity = em.selectGlobal('previousCollision');
-    const prevCollision = previousCollisionEntity.get('previousCollision') as Collisions;
+    const collisions = em.selectGlobal('collisions')?.get('Collisions') as Collisions;
+    const prevCollision = em.selectGlobal('previousCollision')?.get('Collisions') as Collisions;
 
     // solve collisions
     for (const collision of collisions.collisions)
@@ -29,6 +26,7 @@ export class Collide implements System<UpdateContext> {
 
       let idBeacon = '';
       let idShip = '';
+      let idArea = '';
       let scoreComponent = null;
 
       if (componentsMapA.get('Ship')) {
@@ -43,10 +41,18 @@ export class Collide implements System<UpdateContext> {
           idBeacon = collision.idB;
           scoreComponent = componentsMapA.get('Score') as Score;
         }
+        else if (componentsMapB.get('Area')) {
+          idArea = collision.idB;
+          scoreComponent = componentsMapA.get('Score') as Score;
+        }
       }
       else if (idShip === collision.idB) {
         if (componentsMapA.get('Beacon')) {
           idBeacon = collision.idA;
+          scoreComponent = componentsMapB.get('Score') as Score;
+        }
+        else if (componentsMapA.get('Area')) {
+          idArea = collision.idA;
           scoreComponent = componentsMapB.get('Score') as Score;
         }
       }
@@ -55,6 +61,9 @@ export class Collide implements System<UpdateContext> {
         this.deleteBeacon(idBeacon, em);
         this.updateScore(idShip, scoreComponent, em);
         this.spawnBeacon(em);
+      }
+      else if (idArea && idShip) {
+        this.gameOver(idShip, scoreComponent, em);
       }
 
       prevCollision.collisions.push(collision);
@@ -102,5 +111,15 @@ export class Collide implements System<UpdateContext> {
         new Renderer('(0,0,0)', 100, 100)
       ]);
     }
+  }
+
+  private gameOver(idShip: string, scoreComponent: Score | null, em: EntityManager<UpdateContext>) {
+    if (scoreComponent) {
+      scoreComponent.score = -1;
+      em.addComponents(idShip, scoreComponent);
+    }
+
+    const hasToBeDeletedComponent = new HasToBeDeleted();
+    em.addComponents(idShip, hasToBeDeletedComponent);
   }
 }
