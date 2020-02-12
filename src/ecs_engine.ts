@@ -1,7 +1,6 @@
 import { UpdateContext } from "./update_context";
 import { FrameTime } from "./components/frame_time";
 import { Collisions } from "./components/collision";
-import { Collision } from "./utils/utls";
 
 let lastId = 0;
 const nextId = () => `${++lastId}`;
@@ -23,6 +22,7 @@ export class EntityManager<T> {
   private actionSystems = new Map<string, System<T>>();
   private physicSystems = new Map<string, System<T>>();
   private renderingSystems = new Map<string, System<T>>();
+  private stateSystems = new Map<string, System<T>>();
 
   public addEntity(components?: IComponent[]): EntityID {
     const id = nextId();
@@ -127,8 +127,11 @@ export class EntityManager<T> {
         this.physicSystems.set(system.name, system);
         break;
       case 'Rendering':
-          this.renderingSystems.set(system.name, system);
-          break;
+        this.renderingSystems.set(system.name, system);
+        break;
+      case 'State':
+        this.stateSystems.set(system.name, system);
+        break;
       default:
         console.log('type is not valid for system ' + system.name);
     }
@@ -146,6 +149,10 @@ export class EntityManager<T> {
 
     if (this.renderingSystems.has(systemName)) {
       this.renderingSystems.delete(systemName);
+    }
+
+    if (this.stateSystems.has(systemName)) {
+      this.stateSystems.delete(systemName);
     }
   }
 
@@ -177,6 +184,11 @@ export class EntityManager<T> {
 
     // Render phase
     for(let system of this.renderingSystems.values()) {
+      system.onUpdate(this, context);
+    }
+
+    // State management phase
+    for(let system of this.stateSystems.values()) {
       system.onUpdate(this, context);
     }
   }

@@ -1,6 +1,5 @@
 import { EntityManager, System } from '../ecs_engine';
 import { UpdateContext } from '../update_context';
-import { HasToBeDeleted } from '../components/has_to_be_deleted';
 
 export class Clean implements System<UpdateContext> {
   name = 'Clean';

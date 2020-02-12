@@ -28,15 +28,15 @@ import { RenderScore } from "./systems/render_score";
 import { Score } from "./components/score";
 import { Inputs } from "./components/inputs";
 import { GameState } from "./components/game_state";
+import { ManageGame } from "./systems/manage_game";
+import { WorldState } from "./agents/world_state";
+import { Agent } from "./agents/agent";
 
 let gApplication: Application;
 
 export class Application {
     private em: EntityManager<UpdateContext>;
     private canvas2D: CanvasRenderingContext2D;
-    private idArea: string;
-    private id1: string;
-    private id2: string;
 
     // animation variables
     private startTime: number;
@@ -45,6 +45,9 @@ export class Application {
     private then: number;
     private interval: number;
     private fps: number;
+
+    // agent
+    private agent: Agent | null = null;
 
     public constructor(canvas: CanvasRenderingContext2D) {
         // global context
@@ -55,8 +58,12 @@ export class Application {
         this.then = 0;
         this.fps = 30;
         this.interval = 1000 / this.fps;
+        this.em = new EntityManager<UpdateContext>();
         gApplication = this;
 
+    }
+
+    public init(): void {
         this.em = new EntityManager<UpdateContext>();
         this.em.addSystem(new Solve(), 'Action');
 
@@ -73,14 +80,10 @@ export class Application {
         this.em.addSystem(new RenderRadar(), 'Rendering');
         this.em.addSystem(new RenderScore(), 'Rendering');
 
-        this.idArea = this.em.addEntity([
-            new Area(1200, 800),
-            new Position(new Vect2D(0, 0)),
-            new Renderer('(0,0,0)', 1200, 800)
-        ]);
+        this.em.addSystem(new ManageGame, 'State');
 
         // this one will move
-        this.id1 = this.em.addEntity([
+        this.em.addEntity([
             new Ship(),
             new Speed(10),
             new Position(new Vect2D(400, 400)),
@@ -92,7 +95,7 @@ export class Application {
         ]);
 
         // this one will be static
-        this.id2 = this.em.addEntity([
+        this.em.addEntity([
             new Beacon(),
             new Position(new Vect2D(200, 100)),
             new Velocity(new Vect2D(0, 0)),
@@ -101,7 +104,7 @@ export class Application {
         ]);
 
         // this one will be static
-        const id3 = this.em.addEntity([
+        this.em.addEntity([
             new Beacon(),
             new Position(new Vect2D(600, 400)),
             new Velocity(new Vect2D(0, 0)),
@@ -109,7 +112,7 @@ export class Application {
             new Renderer('(0,0,0)', 100, 100)
         ]);
 
-        const id4 = this.em.addEntity([
+        this.em.addEntity([
             new Beacon(),
             new Position(new Vect2D(450, 400)),
             new Velocity(new Vect2D(0, 0)),
@@ -118,28 +121,48 @@ export class Application {
         ]);
 
         // Global entities
-        const idFrame = this.em.addGlobalEntity('frame', [new FrameTime]);
-        const idCollisions = this.em.addGlobalEntity('collisions', [new Collisions]);
-        const idPrevCollisions = this.em.addGlobalEntity('previousCollision', [new Collisions]);
-        const idInputs = this.em.addGlobalEntity('inputs', [new Inputs]);
-        const idArea = this.em.addGlobalEntity('area', [
+        this.em.addGlobalEntity('frame', [new FrameTime]);
+        this.em.addGlobalEntity('collisions', [new Collisions]);
+        this.em.addGlobalEntity('previousCollision', [new Collisions]);
+         this.em.addGlobalEntity('inputs', [new Inputs]);
+        this.em.addGlobalEntity('area', [
             new Area(1200, 800),
             new Position(new Vect2D(0, 0)),
             new Renderer('(0,0,0)', 1200, 800)
         ]);
-        const idGame = this.em.addGlobalEntity('gameState', [new GameState]);
+        this.em.addGlobalEntity('gameState', [new GameState]);
+    }
+
+    public addAgent(newAgent: Agent) {
+        this.agent = newAgent;
+    }
+
+    public runWithoutFrames(nbTurns: number): void {
+        let game = this.em.selectGlobal('gameState')?.get('GameState') as GameState;
+        let currentTurn = 0;
+        while (game.isRunning() && currentTurn < nbTurns) {
+
+            // Get agent action during current loop
+
+            this.em.update({
+                deltaTime: 1.0,
+                time: 0.0,
+                canvas2D: this.canvas2D
+            });
+
+            game = this.em.selectGlobal('gameState')?.get('GameState') as GameState;
+            currentTurn++;
+        }
     }
 
     public run(): void {
         this.startTime = Date.now();
         this.now = this.startTime;
 
-        // Need to have an initialization at this moment
-        // to allow charts to be initialized with correct values
-        // yes I know could be better ...
-        //this.initialize();
-        //this.game.start();
-        document.addEventListener('keydown', this.registerHumanAction, false);
+        if (!this.agent) {
+            document.addEventListener('keydown', this.registerHumanAction, false);
+        }
+
         window.requestAnimationFrame(() => this.animate());
     }
 
@@ -155,6 +178,19 @@ export class Application {
         gApplication.em.addComponents('inputs', inputs);
     }
 
+    private registerAgentAction(worldState: WorldState): void {
+        if (this.agent) {
+            const inputs = this.em.selectGlobal('inputs')?.get('Inputs') as Inputs;
+            inputs.addInput(this.agent.exploit(worldState));
+            this.em.addComponents('inputs', inputs);
+        }
+    }
+
+    private buildWorldState(): WorldState {
+        let worldState = new WorldState();
+        return worldState;
+    }
+
     private animate(): void {
         const game = this.em.selectGlobal('gameState')?.get('GameState') as GameState;
         if (game.isRunning()) {
@@ -164,8 +200,14 @@ export class Application {
             this.delta = this.now - this.then;
 
             if (this.delta > this.interval) {
-                // update time stuffs
 
+                if (this.agent) {
+                    debugger;
+                    const worldState = this.buildWorldState();
+                    this.registerAgentAction(worldState);
+                }
+
+                // update time stuffs
                 // From: http://codetheory.in/controlling-the-frame-rate-with-requestanimationframe/
                 this.then = this.now - (this.delta % this.interval);
 
