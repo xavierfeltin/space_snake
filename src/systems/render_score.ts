@@ -8,8 +8,6 @@ export class RenderScore implements System<UpdateContext> {
   onUpdate(em: EntityManager<UpdateContext>, context: UpdateContext): void {
     const entities = em.select(['Score']);
 
-    debugger;
-
     for (let [entity, componentsMap] of entities.entries()) {
       const score = componentsMap.get('Score') as Score;
       const ctx: CanvasRenderingContext2D = context.canvas2D;

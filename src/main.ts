@@ -29,7 +29,7 @@ if (mainDiv) {
   mainDiv.textContent = `Tensorflow JS version: ${version.tfjs}`;
 }
 
-if (playButton) {
+if (playButton && canvas) {
   playButton.addEventListener("click", (e:Event) => startGame(canvas));
 }
 

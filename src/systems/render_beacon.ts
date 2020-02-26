@@ -17,12 +17,12 @@ export class RenderBeacon implements System<UpdateContext> {
   }
 
   private render(pos: Position, ctx: CanvasRenderingContext2D) {
-    const x = pos.position.x;
-    const y = pos.position.y;
+    const x = (pos.position.x + 0.5) | 0;
+    const y = (pos.position.y + 0.5) | 0;
     const w = 40;
     const h = 40;
-    const transX = w / 2;
-    const transY = h / 2;
+    const transX = (w / 2 + 0.5) | 0;
+    const transY = (h / 2 + 0.5) | 0;
 
     ctx.save(); // save current state
 

@@ -18,24 +18,23 @@ export class RenderShip implements System<UpdateContext> {
   }
 
   private render(pos: Position, orientation: Orientation, ctx: CanvasRenderingContext2D) {
-    const x = pos.position.x;
-    const y = pos.position.y;
-    const w = 40;
-    const h = 40;
+    const x = (pos.position.x + 0.5) | 0; //rounded with a bitwise or
+    const y = (pos.position.y + 0.5) | 0;
     const angle = orientation.angle;
-    const transX = w / 2;
-    const transY = h / 2;
+
+    const sprite = new Image();
+    sprite.src = this.base64ShipSprite;
+    const w = 40; //resize the sprite
+    const h = 40;
+    const transX = (w / 2 + 0.5) | 0;
+    const transY = (h / 2 + 0.5) | 0;
 
     ctx.save(); // save current state
-
     ctx.translate(x - transX, y - transY); // move to desired point
 
     // go to center for rotation
     ctx.translate(transX, transY);
     ctx.rotate(angle * Math.PI / 180); // convert from degree to radian and rotate
-
-    const sprite = new Image();
-    sprite.src = this.base64ShipSprite;
     ctx.drawImage(sprite, -transX, -transY, w, h); // draws the sprite
 
     ctx.restore(); // restore original states (no rotation etc)

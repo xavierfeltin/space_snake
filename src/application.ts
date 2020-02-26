@@ -31,6 +31,7 @@ import { GameState } from "./components/game_state";
 import { ManageGame } from "./systems/manage_game";
 import { WorldState } from "./agents/world_state";
 import { Agent } from "./agents/agent";
+import { SignalRadar } from "./systems/signal_radar";
 
 let gApplication: Application;
 
@@ -64,15 +65,18 @@ export class Application {
     }
 
     public init(): void {
+        this.canvas2D.clearRect(0, 0, 1200, 800);
+
         this.em = new EntityManager<UpdateContext>();
         this.em.addSystem(new Solve(), 'Action');
 
         this.em.addSystem(new Turn(), 'Physics');
         this.em.addSystem(new Orientate(), 'Physics');
-        this.em.addSystem(new DetectCollisions, 'Physics');
+        this.em.addSystem(new DetectCollisions(), 'Physics');
         this.em.addSystem(new Move(), 'Physics');
-        this.em.addSystem(new Collide, 'Physics');
-        this.em.addSystem(new Clean, 'Physics');
+        this.em.addSystem(new Collide(), 'Physics');
+        this.em.addSystem(new Clean(), 'Physics');
+        this.em.addSystem(new SignalRadar(), 'Physics');
 
         this.em.addSystem(new RenderArea(), 'Rendering');
         this.em.addSystem(new RenderBeacon(), 'Rendering');
@@ -89,8 +93,8 @@ export class Application {
             new Position(new Vect2D(400, 400)),
             new Velocity(new Vect2D(1, 0)),
             new Orientation(0),
-            new Radar(100, 5, 6),
-            new RigidBody(20),
+            new Radar(40, 5),
+            new RigidBody(20), //20 is the radius of the rigid body
             new Score()
         ]);
 
@@ -202,7 +206,6 @@ export class Application {
             if (this.delta > this.interval) {
 
                 if (this.agent) {
-                    debugger;
                     const worldState = this.buildWorldState();
                     this.registerAgentAction(worldState);
                 }

@@ -18,9 +18,11 @@ export class RenderArea implements System<UpdateContext> {
     const w = renderer.width;
     const h = renderer.height;
 
+    ctx.clearRect(x, y, w, h);
     ctx.save(); // save current state
     ctx.canvas.height = h;
     ctx.canvas.width = w;
+    ctx.fillStyle = "black";
     ctx.fillRect(x, y, w, h);
     ctx.restore(); // restore original states (no rotation etc)
   }
