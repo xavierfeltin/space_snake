@@ -173,6 +173,8 @@ export class EntityManager<T> {
     prevCollision.collisions = [];
     this.addComponents('previousCollision', prevCollision);
 
+    let t = frameTime.time;
+    let nbSameValue = 0;
     while (frameTime.time < 1.0)
     {
       for(let system of this.physicSystems.values()) {
@@ -180,6 +182,14 @@ export class EntityManager<T> {
       }
 
       frameTime = this.selectGlobal('frame')?.get('FrameTime') as FrameTime;
+      if (frameTime.time == t) {
+        nbSameValue ++;
+        t = frameTime.time;
+        if(nbSameValue > 5) {
+          console.log('collision problem ...');
+          nbSameValue = -10000;
+        }
+      }
     }
 
     // Render phase

@@ -30,7 +30,6 @@ export class RenderRadar implements System<UpdateContext> {
     let currentY = beginY;
     const color = 'rgba(178, 34, 34)';
 
-    debugger;
     for (let i = 0; i < radar.size; i++)
     {
       for (let j = 0; j < radar.size; j++) {

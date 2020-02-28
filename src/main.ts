@@ -5,7 +5,10 @@ import { BasicAgent } from './agents/basic_agent';
 function startGame(canvas: HTMLCanvasElement) {
   if (canvas && canvas.getContext) {
 
-    const ctx = canvas.getContext('2d');
+    if (!ctx) {
+      ctx = canvas.getContext('2d');
+    }
+
     if (ctx) {
       const agent = new BasicAgent();
       const app = new Application(ctx);
@@ -24,6 +27,7 @@ const mainDiv = document.querySelector('#main');
 const canvas = document.querySelector('canvas');
 const playButton = document.getElementById("playbutton");
 const learnButton = document.getElementById("learnbutton");
+let ctx: CanvasRenderingContext2D | null = null;
 
 if (mainDiv) {
   mainDiv.textContent = `Tensorflow JS version: ${version.tfjs}`;

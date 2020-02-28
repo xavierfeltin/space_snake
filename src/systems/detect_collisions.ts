@@ -68,16 +68,17 @@ export class DetectCollisions implements System<UpdateContext> {
           }
         }
 
-        // Collision with area
-        if (posA.position.x - rbA.radius < 0.0 || posA.position.x + rbA.radius > area.width
-          || posA.position.y - rbA.radius < 0.0 || posA.position.y + rbA.radius > area.height) {
+        // Collision with area for moving objects
+        if ((velA.velocity.x > 0 && velA.velocity.y > 0)
+          && (posA.position.x - rbA.radius < 0.0 || posA.position.x + rbA.radius > area.width
+          || posA.position.y - rbA.radius < 0.0 || posA.position.y + rbA.radius > area.height)) {
             const collision = CollisionHelper.createCollision(entityA, 'area', posA.position, new Vect2D(0,0), velA.velocity, new Vect2D(0, 0), rbA.radius, 0, 0);
             firstCollision = collision;
         }
     }
 
     if (firstCollision.collisionTime !== -1) {
-      console.log(JSON.stringify(firstCollision));
+      console.log("first collision: " + JSON.stringify(firstCollision));
       frameTime.time = frameTime.time + firstCollision.collisionTime;
       collisions.addCollision(firstCollision);
     }

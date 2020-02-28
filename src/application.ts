@@ -141,12 +141,13 @@ export class Application {
         this.agent = newAgent;
     }
 
-    public runWithoutFrames(nbTurns: number): void {
+    public runWithoutFrames(nbTurns: number): number {
         let game = this.em.selectGlobal('gameState')?.get('GameState') as GameState;
         let currentTurn = 0;
         while (game.isRunning() && currentTurn < nbTurns) {
 
-            // Get agent action during current loop
+            const worldState = this.buildWorldState();
+            this.registerAgentAction(worldState);
 
             this.em.update({
                 deltaTime: 1.0,
@@ -157,6 +158,13 @@ export class Application {
             game = this.em.selectGlobal('gameState')?.get('GameState') as GameState;
             currentTurn++;
         }
+
+        const entities = this.em.select(['Score']);
+        let score: Score = new Score();
+        for (let [entity, componentsMap] of entities.entries()) {
+            score = componentsMap.get('Score') as Score;
+        }
+        return score.score;
     }
 
     public run(): void {
