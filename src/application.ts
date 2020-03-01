@@ -141,13 +141,45 @@ export class Application {
         this.agent = newAgent;
     }
 
+    public getWorldState(): WorldState {
+        return this.buildWorldState();
+    }
+    
+    public step(action: string): number {
+        let game = this.em.selectGlobal('gameState')?.get('GameState') as GameState;
+        if (game.isRunning()) {
+
+            const inputs = this.em.selectGlobal('inputs')?.get('Inputs') as Inputs;
+            inputs.addInput(action);
+            this.em.addComponents('inputs', inputs);
+
+            this.em.update({
+                deltaTime: 1.0,
+                time: 0.0,
+                canvas2D: this.canvas2D
+            });
+
+            const entities = this.em.select(['Score']);
+            let score: Score = new Score();
+            for (let [entity, componentsMap] of entities.entries()) {
+                score = componentsMap.get('Score') as Score;
+            }
+
+            return score.score; //used as recompense
+        }
+        else {
+            return -1; //ship is dead 
+        }
+    }
+
+
     public runWithoutFrames(nbTurns: number): number {
         let game = this.em.selectGlobal('gameState')?.get('GameState') as GameState;
         let currentTurn = 0;
         while (game.isRunning() && currentTurn < nbTurns) {
 
             const worldState = this.buildWorldState();
-            this.registerAgentAction(worldState);
+            this.getAgentAction(worldState);
 
             this.em.update({
                 deltaTime: 1.0,
@@ -190,16 +222,25 @@ export class Application {
         gApplication.em.addComponents('inputs', inputs);
     }
 
-    private registerAgentAction(worldState: WorldState): void {
+    private getAgentAction(worldState: WorldState): void {
         if (this.agent) {
             const inputs = this.em.selectGlobal('inputs')?.get('Inputs') as Inputs;
-            inputs.addInput(this.agent.exploit(worldState));
-            this.em.addComponents('inputs', inputs);
+            this.agent.pickAction(worldState, 0.5).then((act: string) => {
+                inputs.addInput(act);
+                this.em.addComponents('inputs', inputs);
+            });            
         }
     }
 
     private buildWorldState(): WorldState {
         let worldState = new WorldState();
+
+        const entities = this.em.select(['Radar']);
+        for (let [entity, componentsMap] of entities.entries()) {
+            let radar = componentsMap.get('Radar') as Radar;
+            worldState.state = [...radar.state];
+        }
+
         return worldState;
     }
 
@@ -215,7 +256,7 @@ export class Application {
 
                 if (this.agent) {
                     const worldState = this.buildWorldState();
-                    this.registerAgentAction(worldState);
+                    this.getAgentAction(worldState);
                 }
 
                 // update time stuffs

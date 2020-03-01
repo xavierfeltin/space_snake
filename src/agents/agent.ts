@@ -2,5 +2,5 @@ import { WorldState } from "./world_state";
 
 export abstract class Agent {
     constructor() {}
-    public abstract exploit(world: WorldState): string;
+    public async abstract pickAction(worldState: WorldState, epsilon: number): Promise<string>;
 }
