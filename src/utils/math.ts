@@ -7,4 +7,13 @@ export class MyMath {
             && point.y >= topLeftCorner.y
             && point.y <= bottomRightCorner.y);
     }
+
+     // Return the mean of an array
+     public static mean(array: number[]): number | null{
+        if (array.length == 0)
+            return null;
+        var sum = array.reduce(function(a, b) { return a + b; });
+        var avg = sum / array.length;
+        return avg;
+    }
 }

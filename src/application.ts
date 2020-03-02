@@ -32,12 +32,14 @@ import { ManageGame } from "./systems/manage_game";
 import { WorldState } from "./agents/world_state";
 import { Agent } from "./agents/agent";
 import { SignalRadar } from "./systems/signal_radar";
+import { MyMath } from "./utils/math";
+import * as tf from "@tensorflow/tfjs";
 
 let gApplication: Application;
 
 export class Application {
     private em: EntityManager<UpdateContext>;
-    private canvas2D: CanvasRenderingContext2D;
+    private canvas2D: CanvasRenderingContext2D | null;
 
     // animation variables
     private startTime: number;
@@ -50,7 +52,7 @@ export class Application {
     // agent
     private agent: Agent | null = null;
 
-    public constructor(canvas: CanvasRenderingContext2D) {
+    public constructor(canvas: CanvasRenderingContext2D | null) {
         // global context
         this.canvas2D = canvas;
         this.startTime = 0;
@@ -65,7 +67,9 @@ export class Application {
     }
 
     public init(): void {
-        this.canvas2D.clearRect(0, 0, 1200, 800);
+        if (this.canvas2D) {
+            this.canvas2D.clearRect(0, 0, 1200, 800);
+        }        
 
         this.em = new EntityManager<UpdateContext>();
         this.em.addSystem(new Solve(), 'Action');
@@ -210,6 +214,72 @@ export class Application {
         window.requestAnimationFrame(() => this.animate());
     }
 
+    public async train(agent: Agent) {
+
+        let eps = 1.0;
+        // Used to store the experiences
+        let states: number[] = [];
+        let rewards: number[] = [];
+        let reward_mean: number[] = [];
+        let next_states: number[] = [];
+        let actions: number[] = [];
+
+        // Get the current state of the lidar
+        let st = this.buildWorldState();
+        let st2;
+
+        for (let epi=0; epi < 150; epi++){
+            let reward = 0;
+            let step = 0;
+            while (step < 400){
+                // pick an action
+                let act = agent.pickAction(st, eps);
+
+                const directions = ['left', 'right'];    
+                reward = this.step(directions[act]);
+                st2 = this.buildWorldState();
+
+
+                let mask = [0, 0, 0];
+                mask[act] = 1;
+
+                // Randomly insert the new transition tuple
+                let index = Math.floor(Math.random() * states.length);
+                states.splice(index, 0, ...st.state);
+                rewards.splice(index, 0, reward);
+                reward_mean.splice(index, 0, reward)
+                next_states.splice(index, 0, ...st2.state);
+                actions.splice(index, 0, ...mask);
+                
+                // Be sure to keep the size of the dataset under 10000 transitions
+                if (states.length > 10000){
+                    states = states.slice(1, states.length);
+                    rewards = rewards.slice(1, rewards.length);
+                    reward_mean = reward_mean.slice(1, reward_mean.length);
+                    next_states = next_states.slice(1, next_states.length);
+                    actions = actions.slice(1, actions.length);
+                }
+
+                st = st2;
+                step += 1;
+            }
+            // Decrease epsilon
+            eps = Math.max(0.1, eps*0.99);
+
+            // Train model every 5 episodes
+            if (epi % 5 == 0){
+                console.log("---------------");
+                console.log("rewards mean", MyMath.mean(reward_mean));
+                console.log("episode", epi);
+                this.agent?.train_model(states, actions, rewards, next_states);
+                await tf.nextFrame();
+            }
+            
+            // Shuffle the env
+            this.resetApplication();
+        }
+    }
+
     private registerHumanAction(e: KeyboardEvent) {
 
         const inputs = gApplication.em.selectGlobal('inputs')?.get('Inputs') as Inputs;
@@ -225,10 +295,11 @@ export class Application {
     private getAgentAction(worldState: WorldState): void {
         if (this.agent) {
             const inputs = this.em.selectGlobal('inputs')?.get('Inputs') as Inputs;
-            this.agent.pickAction(worldState, 0.5).then((act: string) => {
-                inputs.addInput(act);
-                this.em.addComponents('inputs', inputs);
-            });            
+            const act = this.agent.pickAction(worldState, 0.5);
+
+            const actions = ['left', 'right'];        
+            inputs.addInput(actions[act]);
+            this.em.addComponents('inputs', inputs);            
         }
     }
 
@@ -270,5 +341,16 @@ export class Application {
                 });
             }
         }
+    }
+
+    private resetApplication() {
+        this.startTime = 0;
+        this.now = 0;
+        this.delta = 0;
+        this.then = 0;
+        this.fps = 30;
+        this.interval = 1000 / this.fps;
+        this.em = new EntityManager<UpdateContext>();
+        this.init();
     }
 }

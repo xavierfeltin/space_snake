@@ -10,7 +10,6 @@ function startGame(canvas: HTMLCanvasElement) {
     }
 
     if (ctx) {
-      const agent = new BasicAgent();
       const app = new Application(ctx);
       app.init();
       app.addAgent(agent);
@@ -19,8 +18,10 @@ function startGame(canvas: HTMLCanvasElement) {
   }
 }
 
-function startLearning() {
-
+async function startLearning() {
+  const app = new Application(null);
+  app.init();
+  await app.train(agent);
 }
 
 const mainDiv = document.querySelector('#main');
@@ -28,6 +29,7 @@ const canvas = document.querySelector('canvas');
 const playButton = document.getElementById("playbutton");
 const learnButton = document.getElementById("learnbutton");
 let ctx: CanvasRenderingContext2D | null = null;
+const agent = new BasicAgent();
 
 if (mainDiv) {
   mainDiv.textContent = `Tensorflow JS version: ${version.tfjs}`;
