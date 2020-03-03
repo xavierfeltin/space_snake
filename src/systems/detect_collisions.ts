@@ -78,7 +78,6 @@ export class DetectCollisions implements System<UpdateContext> {
     }
 
     if (firstCollision.collisionTime !== -1) {
-      console.log("first collision: " + JSON.stringify(firstCollision));
       frameTime.time = frameTime.time + firstCollision.collisionTime;
       collisions.addCollision(firstCollision);
     }

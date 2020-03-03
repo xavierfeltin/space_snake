@@ -7,9 +7,10 @@ export class ManageGame implements System<UpdateContext> {
 
   onUpdate(em: EntityManager<UpdateContext>, context: UpdateContext): void {
     const gameState = em.selectGlobal('gameState')?.get('GameState') as GameState;
-    const entities = em.select(['Ship', 'HasToBeDeleted']);
+    const entities = em.select(['Ship']);
 
-    if (entities.has('Ship')) {
+    if (entities.size == 0) { //only one ship
+        console.log('end game');
         gameState.ending();
         em.addComponents('gameState', gameState);
     }

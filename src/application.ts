@@ -48,6 +48,7 @@ export class Application {
     private then: number;
     private interval: number;
     private fps: number;
+    private sizeRadar: number;
 
     // agent
     private agent: Agent | null = null;
@@ -61,6 +62,7 @@ export class Application {
         this.then = 0;
         this.fps = 30;
         this.interval = 1000 / this.fps;
+        this.sizeRadar = 5;
         this.em = new EntityManager<UpdateContext>();
         gApplication = this;
 
@@ -69,7 +71,7 @@ export class Application {
     public init(): void {
         if (this.canvas2D) {
             this.canvas2D.clearRect(0, 0, 1200, 800);
-        }        
+        }
 
         this.em = new EntityManager<UpdateContext>();
         this.em.addSystem(new Solve(), 'Action');
@@ -82,11 +84,13 @@ export class Application {
         this.em.addSystem(new Clean(), 'Physics');
         this.em.addSystem(new SignalRadar(), 'Physics');
 
-        this.em.addSystem(new RenderArea(), 'Rendering');
-        this.em.addSystem(new RenderBeacon(), 'Rendering');
-        this.em.addSystem(new RenderShip(), 'Rendering');
-        this.em.addSystem(new RenderRadar(), 'Rendering');
-        this.em.addSystem(new RenderScore(), 'Rendering');
+        if (this.canvas2D) {
+            this.em.addSystem(new RenderArea(), 'Rendering');
+            this.em.addSystem(new RenderBeacon(), 'Rendering');
+            this.em.addSystem(new RenderShip(), 'Rendering');
+            this.em.addSystem(new RenderRadar(), 'Rendering');
+            this.em.addSystem(new RenderScore(), 'Rendering');
+        }
 
         this.em.addSystem(new ManageGame, 'State');
 
@@ -94,10 +98,10 @@ export class Application {
         this.em.addEntity([
             new Ship(),
             new Speed(10),
-            new Position(new Vect2D(400, 400)),
+            new Position(new Vect2D(10 + Math.random()*1180, 10 + Math.random()*780)),
             new Velocity(new Vect2D(1, 0)),
             new Orientation(0),
-            new Radar(40, 5),
+            new Radar(40, this.sizeRadar),
             new RigidBody(20), //20 is the radius of the rigid body
             new Score()
         ]);
@@ -148,10 +152,16 @@ export class Application {
     public getWorldState(): WorldState {
         return this.buildWorldState();
     }
-    
+
     public step(action: string): number {
         let game = this.em.selectGlobal('gameState')?.get('GameState') as GameState;
         if (game.isRunning()) {
+
+            let entities = this.em.select(['Score']);
+            let prevScore: Score = new Score();
+            for (let [entity, componentsMap] of entities.entries()) {
+                prevScore = componentsMap.get('Score') as Score;
+            }
 
             const inputs = this.em.selectGlobal('inputs')?.get('Inputs') as Inputs;
             inputs.addInput(action);
@@ -163,16 +173,16 @@ export class Application {
                 canvas2D: this.canvas2D
             });
 
-            const entities = this.em.select(['Score']);
+            entities = this.em.select(['Score']);
             let score: Score = new Score();
             for (let [entity, componentsMap] of entities.entries()) {
                 score = componentsMap.get('Score') as Score;
             }
 
-            return score.score; //used as recompense
+            return score.score - prevScore.score; //used as recompense
         }
         else {
-            return -1; //ship is dead 
+            return -1; //ship is dead
         }
     }
 
@@ -218,39 +228,38 @@ export class Application {
 
         let eps = 1.0;
         // Used to store the experiences
-        let states: number[] = [];
+        let states: number[][] = [];
         let rewards: number[] = [];
         let reward_mean: number[] = [];
-        let next_states: number[] = [];
-        let actions: number[] = [];
+        let next_states: number[][] = [];
+        let actions: number[][] = [];
 
         // Get the current state of the lidar
         let st = this.buildWorldState();
         let st2;
 
-        for (let epi=0; epi < 150; epi++){
+        for (let epi=0; epi < 500; epi++){
             let reward = 0;
             let step = 0;
-            while (step < 400){
+            while (step < 600){
                 // pick an action
                 let act = agent.pickAction(st, eps);
 
-                const directions = ['left', 'right'];    
+                const directions = ['left', 'right'];
                 reward = this.step(directions[act]);
                 st2 = this.buildWorldState();
 
-
-                let mask = [0, 0, 0];
+                let mask = [0, 0];
                 mask[act] = 1;
 
                 // Randomly insert the new transition tuple
                 let index = Math.floor(Math.random() * states.length);
-                states.splice(index, 0, ...st.state);
+                states.splice(index, 0, st.state);
                 rewards.splice(index, 0, reward);
                 reward_mean.splice(index, 0, reward)
-                next_states.splice(index, 0, ...st2.state);
-                actions.splice(index, 0, ...mask);
-                
+                next_states.splice(index, 0, st2.state);
+                actions.splice(index, 0, mask);
+
                 // Be sure to keep the size of the dataset under 10000 transitions
                 if (states.length > 10000){
                     states = states.slice(1, states.length);
@@ -271,13 +280,16 @@ export class Application {
                 console.log("---------------");
                 console.log("rewards mean", MyMath.mean(reward_mean));
                 console.log("episode", epi);
-                this.agent?.train_model(states, actions, rewards, next_states);
+                debugger;
+                agent.train_model(states, actions, rewards, next_states);
                 await tf.nextFrame();
             }
-            
+
             // Shuffle the env
             this.resetApplication();
         }
+
+        console.log('Congrats ! training terminated');
     }
 
     private registerHumanAction(e: KeyboardEvent) {
@@ -297,19 +309,25 @@ export class Application {
             const inputs = this.em.selectGlobal('inputs')?.get('Inputs') as Inputs;
             const act = this.agent.pickAction(worldState, 0.5);
 
-            const actions = ['left', 'right'];        
+            const actions = ['left', 'right'];
             inputs.addInput(actions[act]);
-            this.em.addComponents('inputs', inputs);            
+            this.em.addComponents('inputs', inputs);
         }
     }
 
     private buildWorldState(): WorldState {
         let worldState = new WorldState();
 
-        const entities = this.em.select(['Radar']);
-        for (let [entity, componentsMap] of entities.entries()) {
-            let radar = componentsMap.get('Radar') as Radar;
-            worldState.state = [...radar.state];
+        const game = this.em.selectGlobal('gameState')?.get('GameState') as GameState;
+        if (game.isRunning())
+        {
+            const entities = this.em.select(['Radar']);
+            for (let [entity, componentsMap] of entities.entries()) {
+                let radar = componentsMap.get('Radar') as Radar;
+                worldState.state = [...radar.state];
+            }
+        } else {
+            worldState.state = Array<number>(this.sizeRadar * this.sizeRadar).fill(-1);
         }
 
         return worldState;

@@ -135,7 +135,6 @@ export class EntityManager<T> {
       default:
         console.log('type is not valid for system ' + system.name);
     }
-    console.log('add system ' + system.name);
   }
 
   public removeSystem(systemName: string): void {

@@ -26,7 +26,7 @@ export class BasicAgent implements Agent {
     private model_loss(tf_states: tf.Tensor<tf.Rank> | tf.Tensor<tf.Rank>[], tf_actions: any, Qtargets: any): any{
         return tf.tidy(() => {
             // valeur
-            const prediction = this.model.predict(tf_states) as tf.Tensor<tf.Rank>; 
+            const prediction = this.model.predict(tf_states) as tf.Tensor<tf.Rank>;
             return prediction.sub(Qtargets).square().mul(tf_actions).mean();
         });
     }
@@ -35,10 +35,10 @@ export class BasicAgent implements Agent {
     public train_model(states: tf.TensorLike2D, actions: tf.TensorLike2D, rewards: tf.TensorLike2D, next_states: tf.TensorLike2D): void {
         var size = next_states.length;
         // Transform each array into a tensor
-        let tf_states = tf.tensor2d(states, [states.length, 26]);
+        let tf_states = tf.tensor2d(states, [states.length, 25]);
         let tf_rewards = tf.tensor2d(rewards, [rewards.length, 1]);
-        let tf_next_states = tf.tensor2d(next_states, [next_states.length, 26]);
-        let tf_actions = tf.tensor2d(actions, [actions.length, 3]);
+        let tf_next_states = tf.tensor2d(next_states, [next_states.length, 25]);
+        let tf_actions = tf.tensor2d(actions, [actions.length, 2]);
         // Get the list of loss to compute the mean later in this function
         let losses: any[] = []
 
@@ -94,14 +94,12 @@ export class BasicAgent implements Agent {
             let result = this.model.predict(st_tensor) as tf.Tensor<tf.Rank>;
             let argmax = result.argMax(1);
             let act = argmax.bufferSync().values[0];
-            
+
             argmax.dispose();
             result.dispose();
             st_tensor.dispose();
-    
-            console.log("ended: " + act);                
             return act;
-        }        
+        }
     }
 
     public exploit(world: WorldState): string {
