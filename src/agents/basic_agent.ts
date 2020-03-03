@@ -11,7 +11,7 @@ export class BasicAgent implements Agent {
     constructor() {
         // Create the model
         // Input
-        const input = tf.input({batchShape: [null, 25]});
+        const input = tf.input({batchShape: [null, 33]});
         // Hidden layer
         const layer = tf.layers.dense({useBias: true, units: 32, activation: 'relu'}).apply(input);
         // Output layer
@@ -35,9 +35,9 @@ export class BasicAgent implements Agent {
     public train_model(states: tf.TensorLike2D, actions: tf.TensorLike2D, rewards: tf.TensorLike2D, next_states: tf.TensorLike2D): void {
         var size = next_states.length;
         // Transform each array into a tensor
-        let tf_states = tf.tensor2d(states, [states.length, 25]);
+        let tf_states = tf.tensor2d(states, [states.length, 33]);
         let tf_rewards = tf.tensor2d(rewards, [rewards.length, 1]);
-        let tf_next_states = tf.tensor2d(next_states, [next_states.length, 25]);
+        let tf_next_states = tf.tensor2d(next_states, [next_states.length, 33]);
         let tf_actions = tf.tensor2d(actions, [actions.length, 2]);
         // Get the list of loss to compute the mean later in this function
         let losses: any[] = []

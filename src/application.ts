@@ -109,24 +109,7 @@ export class Application {
         // this one will be static
         this.em.addEntity([
             new Beacon(),
-            new Position(new Vect2D(200, 100)),
-            new Velocity(new Vect2D(0, 0)),
-            new RigidBody(20),
-            new Renderer('(0,0,0)', 100, 100)
-        ]);
-
-        // this one will be static
-        this.em.addEntity([
-            new Beacon(),
-            new Position(new Vect2D(600, 400)),
-            new Velocity(new Vect2D(0, 0)),
-            new RigidBody(20),
-            new Renderer('(0,0,0)', 100, 100)
-        ]);
-
-        this.em.addEntity([
-            new Beacon(),
-            new Position(new Vect2D(450, 400)),
+            new Position(new Vect2D(10 + Math.random()*1180, 10 + Math.random()*780)),
             new Velocity(new Vect2D(0, 0)),
             new RigidBody(20),
             new Renderer('(0,0,0)', 100, 100)
@@ -238,7 +221,7 @@ export class Application {
         let st = this.buildWorldState();
         let st2;
 
-        for (let epi=0; epi < 500; epi++){
+        for (let epi=0; epi < 150; epi++){
             let reward = 0;
             let step = 0;
             while (step < 600){
@@ -280,7 +263,6 @@ export class Application {
                 console.log("---------------");
                 console.log("rewards mean", MyMath.mean(reward_mean));
                 console.log("episode", epi);
-                debugger;
                 agent.train_model(states, actions, rewards, next_states);
                 await tf.nextFrame();
             }
@@ -324,10 +306,13 @@ export class Application {
             const entities = this.em.select(['Radar']);
             for (let [entity, componentsMap] of entities.entries()) {
                 let radar = componentsMap.get('Radar') as Radar;
-                worldState.state = [...radar.state];
+                const directions = Array<number>(8).fill(0);
+                directions[radar.direction] = 1;
+                worldState.state = [...radar.state, ...directions]
             }
         } else {
-            worldState.state = Array<number>(this.sizeRadar * this.sizeRadar).fill(-1);
+            const nbRadarCells = this.sizeRadar * this.sizeRadar;
+            worldState.state = Array<number>(nbRadarCells + 8).fill(-1);
         }
 
         return worldState;

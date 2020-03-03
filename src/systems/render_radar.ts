@@ -2,25 +2,27 @@ import { EntityManager, System } from '../ecs_engine';
 import { UpdateContext } from '../update_context';
 import { Radar } from '../components/radar';
 import { Position } from '../components/position';
-import { cos } from '@tensorflow/tfjs';
+import { cos, sin } from '@tensorflow/tfjs';
 import { Vect2D } from '../utils/vect2D';
+import { Velocity } from '../components/velocity';
 
 export class RenderRadar implements System<UpdateContext> {
   name = 'RenderRadar';
 
   onUpdate(em: EntityManager<UpdateContext>, context: UpdateContext): void {
-    const entities = em.select(['Radar', 'Position']);
+    const entities = em.select(['Radar', 'Position', 'Velocity']);
 
     const ctx: CanvasRenderingContext2D = context.canvas2D;
 
     for (let [entity, componentsMap] of entities.entries()) {
       const radar = componentsMap.get('Radar') as Radar;
       const pos = componentsMap.get('Position') as Position;
-      this.render(radar, pos, ctx);
+      const vel = componentsMap.get('Velocity') as Velocity;
+      this.render(radar, pos, vel, ctx);
     }
   }
 
-  private render(radar: Radar, pos: Position, ctx: CanvasRenderingContext2D) {
+  private render(radar: Radar, pos: Position, vel: Velocity, ctx: CanvasRenderingContext2D) {
     const x = pos.position.x;
     const y = pos.position.y;
 
@@ -47,7 +49,11 @@ export class RenderRadar implements System<UpdateContext> {
       currentY = currentY + radar.cellSize;
     }
 
-    ctx.restore(); // restore original states (no rotation etc)
+    if (radar.direction != -1) {
+      this.renderDirection(pos.position, vel.velocity, radar.direction, ctx);
+    }
+    
+    // ctx.restore(); // restore original states (no rotation etc)
   }
 
   private renderCell(pos: Vect2D, size: number, color: string, ctx: CanvasRenderingContext2D) {
@@ -90,6 +96,38 @@ export class RenderRadar implements System<UpdateContext> {
     ctx.fillRect(pos.x, pos.y, size, size);
 
     ctx.restore(); // save current state
+  }
+
+  private renderDirection(pos: Vect2D, vel: Vect2D, direction: number, ctx: CanvasRenderingContext2D) {
+    ctx.save(); // save current state
+    
+    ctx.beginPath();
+    ctx.strokeStyle = 'blue';
+
+    ctx.moveTo(pos.x, pos.y);
+    
+
+    let angle = 0;
+    switch(direction) {
+      case 1: angle = 45; break;
+      case 2: angle = 90; break;
+      case 3: angle = 135; break;
+      case 4: angle = 180; break;
+      case 5: angle = -135; break;
+      case 6: angle = -90; break;
+      case 7: angle = -45; break;
+      default: angle = 0; break;
+    }
+
+    angle = angle * Math.PI / 180;
+    const len = 50;
+    const target = new Vect2D(vel.x * Math.cos(angle), vel.y * Math.sin(angle)); target.normalize();
+    ctx.lineTo(pos.x + len * target.x, pos.y + len * target.y);
+
+    ctx.rotate(angle);    
+    ctx.stroke()
+
+    ctx.restore();
   }
 
   /*
