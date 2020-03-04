@@ -100,7 +100,7 @@ export class Application {
         // Main player
         this.em.addEntity([
             new Ship(),
-            new Speed(10),
+            new Speed(7),
             new Position(new Vect2D(600, 400)),
             new Velocity(new Vect2D(1, 0)),
             new Orientation(0),
@@ -112,7 +112,7 @@ export class Application {
         // this one will be static
         this.em.addEntity([
             new Beacon(),
-            new Position(new Vect2D(10 + Math.random()*1180, 10 + Math.random()*780)),
+            new Position(new Vect2D(10 + Math.random()*1150, 10 + Math.random()*750)),
             new Velocity(new Vect2D(0, 0)),
             new RigidBody(20),
             new Renderer('(0,0,0)', 100, 100)

@@ -96,12 +96,12 @@ export class Collide implements System<UpdateContext> {
     for (let [entity, componentsMap] of entities.entries()) {
       const area = componentsMap.get('Area') as Area;
       let x = Math.random() * area.width;
-      x = Math.max(sizeBody, x);
-      x = Math.min(area.width - sizeBody, x);
+      x = Math.max(sizeBody + 50, x);
+      x = Math.min(area.width - sizeBody - 50, x);
 
       let y = Math.random() * area.height;
-      y = Math.max(sizeBody, y);
-      y = Math.min(area.width - sizeBody, y);
+      y = Math.max(sizeBody + 50, y);
+      y = Math.min(area.width - sizeBody - 50, y);
 
       em.addEntity([
         new Beacon(),
