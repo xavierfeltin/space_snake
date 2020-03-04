@@ -13,7 +13,7 @@ export class Turn implements System<UpdateContext> {
       const rotation = componentsMap.get('TurnAction') as TurnAction;
       const orientation = componentsMap.get('Orientation') as Orientation;
 
-      orientation.angle += rotation.angle;
+      orientation.angle = (orientation.angle + rotation.angle) % 360;
 
       em.addComponents(entity, orientation);
       em.removeComponent(entity, rotation);

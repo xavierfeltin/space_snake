@@ -2,6 +2,7 @@ import { EntityManager, System } from '../ecs_engine';
 import { UpdateContext } from '../update_context';
 import { Position } from '../components/position';
 import { Orientation } from '../components/orientation';
+import { Vect2D } from '../utils/vect2D';
 
 export class RenderShip implements System<UpdateContext> {
   name = 'RenderShip';

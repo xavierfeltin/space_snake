@@ -55,7 +55,6 @@ export class Application {
 
     public constructor(canvas: CanvasRenderingContext2D | null) {
         // global context
-        this.canvas2D = canvas;
         this.startTime = 0;
         this.now = 0;
         this.delta = 0;
@@ -64,8 +63,12 @@ export class Application {
         this.interval = 1000 / this.fps;
         this.sizeRadar = 5;
         this.em = new EntityManager<UpdateContext>();
+        this.canvas2D = null;
         gApplication = this;
+    }
 
+    public setCanvas(ctx:  CanvasRenderingContext2D | null) {
+        this.canvas2D = ctx;
     }
 
     public init(): void {
@@ -94,11 +97,11 @@ export class Application {
 
         this.em.addSystem(new ManageGame, 'State');
 
-        // this one will move
+        // Main player
         this.em.addEntity([
             new Ship(),
             new Speed(10),
-            new Position(new Vect2D(10 + Math.random()*1180, 10 + Math.random()*780)),
+            new Position(new Vect2D(600, 400)),
             new Velocity(new Vect2D(1, 0)),
             new Orientation(0),
             new Radar(40, this.sizeRadar),
@@ -146,6 +149,23 @@ export class Application {
                 prevScore = componentsMap.get('Score') as Score;
             }
 
+            entities = this.em.select(['Position', 'Radar', 'Ship']);
+            let posShip = new Position(new Vect2D(0,0));
+            let radarShip = new Radar(0,0);
+            for (let [entity, componentsMap] of entities.entries()) {
+                posShip = componentsMap.get('Position') as Position;
+                radarShip = componentsMap.get('Radar') as Radar;
+            }
+
+            entities = this.em.select(['Position', 'Beacon']);
+            let posBeacon = new Position(new Vect2D(0,0));
+            for (let [entity, componentsMap] of entities.entries()) {
+                posBeacon = componentsMap.get('Position') as Position;
+            }
+
+            const prevDistance = posShip.position.distance2(posBeacon.position);
+            const prevRadarDir = radarShip.direction;
+
             const inputs = this.em.selectGlobal('inputs')?.get('Inputs') as Inputs;
             inputs.addInput(action);
             this.em.addComponents('inputs', inputs);
@@ -162,14 +182,48 @@ export class Application {
                 score = componentsMap.get('Score') as Score;
             }
 
-            return score.score - prevScore.score; //used as recompense
+            entities = this.em.select(['Position', 'Radar', 'Ship']);
+            posShip = new Position(new Vect2D(0,0));
+            radarShip = new Radar(0,0);
+            for (let [entity, componentsMap] of entities.entries()) {
+                posShip = componentsMap.get('Position') as Position;
+                radarShip = componentsMap.get('Radar') as Radar;
+            }
+
+            entities = this.em.select(['Position', 'Beacon']);
+            posBeacon = new Position(new Vect2D(0,0));
+            for (let [entity, componentsMap] of entities.entries()) {
+                posBeacon = componentsMap.get('Position') as Position;
+            }
+
+            const newDistance = posShip.position.distance2(posBeacon.position);
+            const newRadarDir = radarShip.direction;
+
+            let rewardDistance = -1; // do not follow objective
+            if (newDistance < prevDistance) {
+                rewardDistance = 1;
+            }
+
+            let rewardOrientation = -1; // do not follow objective
+            if (Math.abs(newRadarDir) < Math.abs(prevRadarDir) || ((prevRadarDir == 0) && (newRadarDir == 0))) {
+                rewardOrientation = 1;
+            }
+
+            let rewardScore = 0;
+            if ((score.score - prevScore.score) > 0) {
+                rewardScore = 10;
+            }
+
+            return rewardDistance + rewardOrientation + rewardScore; //used as recompense
+            //return score.score - prevScore.score; //used as recompense
         }
         else {
+            //return -10; //ship is dead
             return -1; //ship is dead
         }
     }
 
-
+    /*
     public runWithoutFrames(nbTurns: number): number {
         let game = this.em.selectGlobal('gameState')?.get('GameState') as GameState;
         let currentTurn = 0;
@@ -195,6 +249,7 @@ export class Application {
         }
         return score.score;
     }
+    */
 
     public run(): void {
         this.startTime = Date.now();
@@ -221,18 +276,18 @@ export class Application {
         let st = this.buildWorldState();
         let st2;
 
-        for (let epi=0; epi < 150; epi++){
+        for (let epi=0; epi < 400; epi++){
             let reward = 0;
             let step = 0;
-            while (step < 600){
+            while (step < 800 && reward > -1){
                 // pick an action
                 let act = agent.pickAction(st, eps);
 
-                const directions = ['left', 'right'];
+                const directions = ['left', 'right', 'straignt'];
                 reward = this.step(directions[act]);
                 st2 = this.buildWorldState();
 
-                let mask = [0, 0];
+                let mask = [0, 0, 0];
                 mask[act] = 1;
 
                 // Randomly insert the new transition tuple
@@ -269,6 +324,7 @@ export class Application {
 
             // Shuffle the env
             this.resetApplication();
+            this.init();
         }
 
         console.log('Congrats ! training terminated');
@@ -283,15 +339,18 @@ export class Application {
         else if (e.keyCode === 39) {
             inputs.addInput('right');
         }
+        else {
+            inputs.addInput('straight');
+        }
         gApplication.em.addComponents('inputs', inputs);
     }
 
     private getAgentAction(worldState: WorldState): void {
         if (this.agent) {
             const inputs = this.em.selectGlobal('inputs')?.get('Inputs') as Inputs;
-            const act = this.agent.pickAction(worldState, 0.5);
+            const act = this.agent.pickAction(worldState, 0.0);
 
-            const actions = ['left', 'right'];
+            const actions = ['left', 'right', 'straight'];
             inputs.addInput(actions[act]);
             this.em.addComponents('inputs', inputs);
         }
@@ -306,13 +365,13 @@ export class Application {
             const entities = this.em.select(['Radar']);
             for (let [entity, componentsMap] of entities.entries()) {
                 let radar = componentsMap.get('Radar') as Radar;
-                const directions = Array<number>(8).fill(0);
-                directions[radar.direction] = 1;
-                worldState.state = [...radar.state, ...directions]
+                //const directions = Array<number>(8).fill(0);
+                //directions[radar.direction] = 1;
+                worldState.state = [...radar.state, radar.direction];
             }
         } else {
             const nbRadarCells = this.sizeRadar * this.sizeRadar;
-            worldState.state = Array<number>(nbRadarCells + 8).fill(-1);
+            worldState.state = Array<number>(nbRadarCells + 1).fill(-1);
         }
 
         return worldState;
@@ -346,7 +405,7 @@ export class Application {
         }
     }
 
-    private resetApplication() {
+    public resetApplication() {
         this.startTime = 0;
         this.now = 0;
         this.delta = 0;
@@ -354,6 +413,5 @@ export class Application {
         this.fps = 30;
         this.interval = 1000 / this.fps;
         this.em = new EntityManager<UpdateContext>();
-        this.init();
     }
 }

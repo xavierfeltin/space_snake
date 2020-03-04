@@ -5,27 +5,27 @@ import { Vect2D } from '../utils/vect2D';
 import { Area } from '../components/area';
 import { Radar } from '../components/radar';
 import { MyMath } from '../utils/math';
-import { Velocity } from '../components/velocity';
+import { Orientation } from '../components/orientation';
 
 export class SignalRadar implements System<UpdateContext> {
   name = 'SignalRadar';
 
   onUpdate(em: EntityManager<UpdateContext>, context: UpdateContext): void {
     const entities = em.select(['RigidBody', 'Position'], ['Ship']);
-    const playerEntities = em.select(['Radar', 'Position', 'Ship', 'Velocity']);
+    const playerEntities = em.select(['Radar', 'Position', 'Ship', 'Orientation']);
     const area = em.selectGlobal('area')?.get('Area') as Area;
 
     for (let [entity, componentsMap] of playerEntities.entries()) {
         const radar = componentsMap.get('Radar') as Radar;
         const positionShip = componentsMap.get('Position') as Position;
-        const velocityShip = componentsMap.get('Velocity') as Velocity;
+        const orientationShip = componentsMap.get('Orientation') as Orientation;
 
         if (!positionShip || !radar) {
             continue;
         }
 
         radar.state = this.computeRadar(radar, positionShip, area, entities);
-        radar.direction = this.computeBeaconDirection(positionShip, velocityShip, entities);
+        radar.direction = this.computeBeaconDirection(positionShip, orientationShip, entities);
 
         em.addComponents(entity, radar);
     }
@@ -69,13 +69,13 @@ export class SignalRadar implements System<UpdateContext> {
     return newState;
   }
 
-  private computeBeaconDirection(posShip: Position, velShip: Velocity, entities:  Map<string, Map<string, IComponent>>): number {
+  private computeBeaconDirection(posShip: Position, orientationShip: Orientation, entities:  Map<string, Map<string, IComponent>>): number {
 
     let direction = -1;
     // Check against game objects
     for (let [entityObject, componentsMapObjects] of entities.entries()) {
         const pos = componentsMapObjects.get('Position') as Position;
-        direction = MyMath.getCardinalDirection(posShip.position, velShip.velocity, pos.position);
+        direction = MyMath.getCardinalDirection(posShip.position, orientationShip.heading, pos.position);
         break; // take the firs tone
     }
 

@@ -17,20 +17,29 @@ export class MyMath {
         return avg;
     }
 
+    public static getDirectionFromAngle(angle: number): Vect2D {
+        const rad = angle * Math.PI / 180;
+        const vx = Math.cos(rad);
+        const vy = Math.sin(rad);
+        return new Vect2D(vx, vy);
+    }
+
     // Return the cardinal direction the target is placed from the center
     // 0: North, 1: North East, 2: East, ....
-    public static getCardinalDirection(center: Vect2D, vel: Vect2D, target: Vect2D): number {
-        const ship = vel;
+    public static getCardinalDirection(center: Vect2D, direction: Vect2D, target: Vect2D): number {
+        const ship = direction;
         ship.normalize();
-        
+
         const toTargetVector = new Vect2D(target.x - center.x, target.y - center.y);
         toTargetVector.normalize();
 
-        const cosDeg = toTargetVector.angleWithVector(vel) * 180 / Math.PI; // wwith normalized vector
+        const angleDeg = toTargetVector.angleWithVector(direction) * 180 / Math.PI; // wwith normalized vector
+        return -angleDeg;
 
-        if (-25 < cosDeg && cosDeg < 25) {
+        /*
+        if (-5 < cosDeg && cosDeg < 5) {
             return 0;
-        } else if (25 <= cosDeg && cosDeg < 70) {
+        } else if (5 <= cosDeg && cosDeg < 70) {
             return 1;
         } else if (70 <= cosDeg && cosDeg < 115) {
             return 2
@@ -45,5 +54,6 @@ export class MyMath {
         } else {
             return 7;
         }
+        */
     }
 }

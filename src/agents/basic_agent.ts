@@ -7,15 +7,16 @@ export class BasicAgent implements Agent {
 
     private model: tf.LayersModel;
     private model_optimizer: tf.AdamOptimizer;
+    private nbInputs = 26;
 
     constructor() {
         // Create the model
         // Input
-        const input = tf.input({batchShape: [null, 33]});
+        const input = tf.input({batchShape: [null, this.nbInputs]});
         // Hidden layer
         const layer = tf.layers.dense({useBias: true, units: 32, activation: 'relu'}).apply(input);
         // Output layer
-        const output = tf.layers.dense({useBias: true, units: 2, activation: 'linear'}).apply(layer) as tf.SymbolicTensor;
+        const output = tf.layers.dense({useBias: true, units: 3, activation: 'linear'}).apply(layer) as tf.SymbolicTensor;
         // Create the model
         this.model = tf.model({inputs: input, outputs: output});
         // Optimize
@@ -35,10 +36,10 @@ export class BasicAgent implements Agent {
     public train_model(states: tf.TensorLike2D, actions: tf.TensorLike2D, rewards: tf.TensorLike2D, next_states: tf.TensorLike2D): void {
         var size = next_states.length;
         // Transform each array into a tensor
-        let tf_states = tf.tensor2d(states, [states.length, 33]);
+        let tf_states = tf.tensor2d(states, [states.length, this.nbInputs]);
         let tf_rewards = tf.tensor2d(rewards, [rewards.length, 1]);
-        let tf_next_states = tf.tensor2d(next_states, [next_states.length, 33]);
-        let tf_actions = tf.tensor2d(actions, [actions.length, 2]);
+        let tf_next_states = tf.tensor2d(next_states, [next_states.length, this.nbInputs]);
+        let tf_actions = tf.tensor2d(actions, [actions.length, 3]);
         // Get the list of loss to compute the mean later in this function
         let losses: any[] = []
 
