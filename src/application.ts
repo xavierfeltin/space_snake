@@ -148,17 +148,22 @@ export class Application {
         if (game.isRunning()) {
 
             let entities = this.em.select(['Score']);
-            let prevScore: Score = new Score();
+            let prevScore: number = 0;
             for (let [entity, componentsMap] of entities.entries()) {
-                prevScore = componentsMap.get('Score') as Score;
+                let s = componentsMap.get('Score') as Score;
+                prevScore = s.score;
             }
 
             entities = this.em.select(['Position', 'Radar', 'Ship']);
             let posShip = new Position(new Vect2D(0,0));
-            let radarShip = new Radar(0,0);
+            let prevRadarDir: number | null = null;
             for (let [entity, componentsMap] of entities.entries()) {
-                posShip = componentsMap.get('Position') as Position;
-                radarShip = componentsMap.get('Radar') as Radar;
+                let p = componentsMap.get('Position') as Position;
+                posShip.position.x = p.position.x;
+                posShip.position.y = p.position.y;
+
+                let r = componentsMap.get('Radar') as Radar;
+                prevRadarDir = r.direction;
             }
 
             entities = this.em.select(['Position', 'Beacon']);
@@ -167,8 +172,8 @@ export class Application {
                 posBeacon = componentsMap.get('Position') as Position;
             }
 
+            const prevPos = posShip.position;
             const prevDistance = posShip.position.distance2(posBeacon.position);
-            const prevRadarDir = radarShip.direction;
 
             const inputs = this.em.selectGlobal('inputs')?.get('Inputs') as Inputs;
             inputs.addInput(action);
@@ -181,17 +186,22 @@ export class Application {
             });
 
             entities = this.em.select(['Score']);
-            let score: Score = new Score();
+            let score: number = 0;
             for (let [entity, componentsMap] of entities.entries()) {
-                score = componentsMap.get('Score') as Score;
+                let s = componentsMap.get('Score') as Score;
+                score = s.score;
             }
 
             entities = this.em.select(['Position', 'Radar', 'Ship']);
             posShip = new Position(new Vect2D(0,0));
-            radarShip = new Radar(0,0);
+            let newRadarDir: number | null = null
             for (let [entity, componentsMap] of entities.entries()) {
-                posShip = componentsMap.get('Position') as Position;
-                radarShip = componentsMap.get('Radar') as Radar;
+                let p = componentsMap.get('Position') as Position;
+                posShip.position.x = p.position.x;
+                posShip.position.y = p.position.y;
+
+                let r = componentsMap.get('Radar') as Radar;
+                newRadarDir = r.direction;
             }
 
             entities = this.em.select(['Position', 'Beacon']);
@@ -200,25 +210,27 @@ export class Application {
                 posBeacon = componentsMap.get('Position') as Position;
             }
 
-            const newDistance = posShip.position.distance2(posBeacon.position);
-            const newRadarDir = radarShip.direction;
+            const newPos = posShip.position;
+            const traveledDistance = prevPos.distance(newPos);
+            let rewardTravel = traveledDistance / 7;
 
+            const newDistance = posShip.position.distance2(posBeacon.position);
             let rewardDistance = -1; // do not follow objective
             if (newDistance < prevDistance) {
                 rewardDistance = 1;
             }
 
             let rewardOrientation = -1; // do not follow objective
-            if (prevRadarDir == null || newRadarDir == null || Math.abs(newRadarDir) < Math.abs(prevRadarDir) || ((prevRadarDir == 0) && (newRadarDir == 0))) {
+            if ((prevRadarDir != null && newRadarDir != null) && (Math.abs(newRadarDir) < Math.abs(prevRadarDir) || ((prevRadarDir == 0) && (newRadarDir == 0)))) {
                 rewardOrientation = 1;
             }
 
             let rewardScore = 0;
-            if ((score.score - prevScore.score) > 0) {
+            if ((score - prevScore) > 0) {
                 rewardScore = 10;
             }
 
-            return rewardDistance + /* rewardOrientation */ + rewardScore; //used as recompense
+            return rewardDistance + /*rewardTravel*/ + rewardOrientation + rewardScore; //used as recompense
             //return (score.score - prevScore.score) * 10; //used as recompense
         }
         else {
@@ -390,9 +402,10 @@ export class Application {
         const game = this.em.selectGlobal('gameState')?.get('GameState') as GameState;
         if (game.isRunning())
         {
-            const entities = this.em.select(['Radar']);
+            const entities = this.em.select(['Radar', 'Position']);
             for (let [entity, componentsMap] of entities.entries()) {
                 let radar = componentsMap.get('Radar') as Radar;
+                let position = componentsMap.get('Position') as Position;
                 worldState.state = [...radar.state, radar.direction || 0];
             }
         } else {
