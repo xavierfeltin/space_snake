@@ -8,15 +8,18 @@ export class BasicAgent implements Agent {
     private model: tf.LayersModel;
     private model_optimizer: tf.AdamOptimizer;
     private nbInputs = 26;
+    private nbActions = 3;
 
     constructor() {
         // Create the model
         // Input
         const input = tf.input({batchShape: [null, this.nbInputs]});
         // Hidden layer
-        const layer = tf.layers.dense({useBias: true, units: 32, activation: 'relu'}).apply(input);
+        const layer0 = tf.layers.dense({useBias: true, units: 32, activation: 'relu'}).apply(input);
+        // Hidden layer
+        const layer = tf.layers.dense({useBias: true, units: 32, activation: 'relu'}).apply(layer0);
         // Output layer
-        const output = tf.layers.dense({useBias: true, units: 3, activation: 'linear'}).apply(layer) as tf.SymbolicTensor;
+        const output = tf.layers.dense({useBias: true, units: this.nbActions, activation: 'linear'}).apply(layer) as tf.SymbolicTensor;
         // Create the model
         this.model = tf.model({inputs: input, outputs: output});
         // Optimize
@@ -33,13 +36,13 @@ export class BasicAgent implements Agent {
     }
 
     // Train the model
-    public train_model(states: tf.TensorLike2D, actions: tf.TensorLike2D, rewards: tf.TensorLike2D, next_states: tf.TensorLike2D): void {
+    public train_model(states: tf.TensorLike2D, actions: tf.TensorLike2D, rewards: tf.TensorLike2D, next_states: tf.TensorLike2D): number | null{
         var size = next_states.length;
         // Transform each array into a tensor
         let tf_states = tf.tensor2d(states, [states.length, this.nbInputs]);
         let tf_rewards = tf.tensor2d(rewards, [rewards.length, 1]);
         let tf_next_states = tf.tensor2d(next_states, [next_states.length, this.nbInputs]);
-        let tf_actions = tf.tensor2d(actions, [actions.length, 3]);
+        let tf_actions = tf.tensor2d(actions, [actions.length, this.nbActions]);
         // Get the list of loss to compute the mean later in this function
         let losses: any[] = []
 
@@ -74,20 +77,20 @@ export class BasicAgent implements Agent {
             Qtargets_b.dispose();
         }
 
-        console.log("Mean loss", MyMath.mean(losses));
-
         // Dispose the tensors from the memory
         Qtargets.dispose();
         tf_states.dispose();
         tf_rewards.dispose();
         tf_next_states.dispose();
         tf_actions.dispose();
+
+        return  MyMath.mean(losses);
     }
 
     // Pick an action eps-greedy
     public pickAction(worldState: WorldState, epsilon: number): number{
         if (Math.random() < epsilon){ // Pick a random action
-            return Math.floor(Math.random()*2);
+            return Math.floor(Math.random() * this.nbActions);
         }
         else {
             let st = worldState.state;

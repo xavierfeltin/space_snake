@@ -53,6 +53,10 @@ export class Application {
     // agent
     private agent: Agent | null = null;
 
+    // training
+    public trainMeans: number[] = [];
+    public trainLosses: number[] = [];
+
     public constructor(canvas: CanvasRenderingContext2D | null) {
         // global context
         this.startTime = 0;
@@ -76,7 +80,7 @@ export class Application {
             this.canvas2D.clearRect(0, 0, 1200, 800);
         }
 
-        this.em = new EntityManager<UpdateContext>();
+        this.em.clearAll();
         this.em.addSystem(new Solve(), 'Action');
 
         this.em.addSystem(new Turn(), 'Physics');
@@ -109,10 +113,10 @@ export class Application {
             new Score()
         ]);
 
-        // this one will be static
+        // these ones will be static
         this.em.addEntity([
             new Beacon(),
-            new Position(new Vect2D(10 + Math.random()*1150, 10 + Math.random()*750)),
+            new Position(new Vect2D(50 + Math.random()*1100, 50 + Math.random()*700)),
             new Velocity(new Vect2D(0, 0)),
             new RigidBody(20),
             new Renderer('(0,0,0)', 100, 100)
@@ -205,7 +209,7 @@ export class Application {
             }
 
             let rewardOrientation = -1; // do not follow objective
-            if (Math.abs(newRadarDir) < Math.abs(prevRadarDir) || ((prevRadarDir == 0) && (newRadarDir == 0))) {
+            if (prevRadarDir == null || newRadarDir == null || Math.abs(newRadarDir) < Math.abs(prevRadarDir) || ((prevRadarDir == 0) && (newRadarDir == 0))) {
                 rewardOrientation = 1;
             }
 
@@ -214,12 +218,11 @@ export class Application {
                 rewardScore = 10;
             }
 
-            return rewardDistance + rewardOrientation + rewardScore; //used as recompense
-            //return score.score - prevScore.score; //used as recompense
+            return rewardDistance + /* rewardOrientation */ + rewardScore; //used as recompense
+            //return (score.score - prevScore.score) * 10; //used as recompense
         }
         else {
-            //return -10; //ship is dead
-            return -1; //ship is dead
+            return -10; //ship is dead
         }
     }
 
@@ -263,6 +266,8 @@ export class Application {
     }
 
     public async train(agent: Agent) {
+        this.trainMeans = [];
+        this.trainLosses = [];
 
         let eps = 1.0;
         // Used to store the experiences
@@ -276,15 +281,25 @@ export class Application {
         let st = this.buildWorldState();
         let st2;
 
-        for (let epi=0; epi < 400; epi++){
-            let reward = 0;
+        for (let epi=0; epi < 200; epi++){
+            let reward = null;
             let step = 0;
-            while (step < 800 && reward > -1){
+            let deadStep = null;
+            let score = 0;
+            while (step < 1000 && (reward == null || reward != -10)){
                 // pick an action
                 let act = agent.pickAction(st, eps);
 
                 const directions = ['left', 'right', 'straignt'];
                 reward = this.step(directions[act]);
+
+                if (reward == -10 && deadStep == null) {
+                    deadStep = step;
+                }
+                else if (reward == 10) {
+                    score++;
+                }
+
                 st2 = this.buildWorldState();
 
                 let mask = [0, 0, 0];
@@ -310,15 +325,28 @@ export class Application {
                 st = st2;
                 step += 1;
             }
+            console.log('game score: ' + score + ', dead at step: ' + deadStep);
+
             // Decrease epsilon
             eps = Math.max(0.1, eps*0.99);
 
             // Train model every 5 episodes
-            if (epi % 5 == 0){
+            if (epi % 5 == 0 && epi >= 5){
+                const meanReward = MyMath.mean(reward_mean);
+                const meanLoss = agent.train_model(states, actions, rewards, next_states);
+                this.trainMeans.push(meanReward || -100);
+                this.trainLosses.push(meanLoss || -100);
+
                 console.log("---------------");
-                console.log("rewards mean", MyMath.mean(reward_mean));
+                console.log("rewards mean", meanReward);
+                console.log("losses mean", meanLoss);
                 console.log("episode", epi);
-                agent.train_model(states, actions, rewards, next_states);
+
+                const trainingDiv = document.querySelector('#training');
+                if (trainingDiv) {
+                    trainingDiv.textContent = `Episode ${epi}: Mean R ${meanReward} - Mean L ${meanLoss}`;
+                }
+
                 await tf.nextFrame();
             }
 
@@ -365,9 +393,7 @@ export class Application {
             const entities = this.em.select(['Radar']);
             for (let [entity, componentsMap] of entities.entries()) {
                 let radar = componentsMap.get('Radar') as Radar;
-                //const directions = Array<number>(8).fill(0);
-                //directions[radar.direction] = 1;
-                worldState.state = [...radar.state, radar.direction];
+                worldState.state = [...radar.state, radar.direction || 0];
             }
         } else {
             const nbRadarCells = this.sizeRadar * this.sizeRadar;
@@ -412,6 +438,5 @@ export class Application {
         this.then = 0;
         this.fps = 30;
         this.interval = 1000 / this.fps;
-        this.em = new EntityManager<UpdateContext>();
     }
 }

@@ -12,6 +12,7 @@ export class MyMath {
      public static mean(array: number[]): number | null{
         if (array.length == 0)
             return null;
+
         var sum = array.reduce(function(a, b) { return a + b; });
         var avg = sum / array.length;
         return avg;
@@ -34,7 +35,7 @@ export class MyMath {
         toTargetVector.normalize();
 
         const angleDeg = toTargetVector.angleWithVector(direction) * 180 / Math.PI; // wwith normalized vector
-        return -angleDeg;
+        return Math.round(-angleDeg);
 
         /*
         if (-5 < cosDeg && cosDeg < 5) {

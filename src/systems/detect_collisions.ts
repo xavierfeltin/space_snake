@@ -41,6 +41,7 @@ export class DetectCollisions implements System<UpdateContext> {
 
           let alreadyCollidedThisFrame = false;
           for (const prevColl of prevCollision.collisions) {
+            
             if ((prevColl.idA === entityA && prevColl.idB === entityB)
             || (prevColl.idA === entityB && prevColl.idB === entityA)) {
               alreadyCollidedThisFrame = true;

@@ -24,6 +24,15 @@ export class EntityManager<T> {
   private renderingSystems = new Map<string, System<T>>();
   private stateSystems = new Map<string, System<T>>();
 
+  public clearAll(): void {
+    this.entities = new Set<EntityID>();
+    this.entityComponentsMap = new Map<EntityID, Map<ComponentKind, IComponent>>();
+    this.actionSystems = new Map<string, System<T>>();
+    this.physicSystems = new Map<string, System<T>>();
+    this.renderingSystems = new Map<string, System<T>>();
+    this.stateSystems = new Map<string, System<T>>();
+  }
+
   public addEntity(components?: IComponent[]): EntityID {
     const id = nextId();
     this.entities.add(id);
@@ -184,9 +193,11 @@ export class EntityManager<T> {
       if (frameTime.time == t) {
         nbSameValue ++;
         t = frameTime.time;
-        if(nbSameValue > 5) {
-          console.log('collision problem ...');
-          nbSameValue = -10000;
+        if(nbSameValue > 50) {
+          console.log('collision problem ... with t = ' + t + ' ignore collision');
+          frameTime.time += 0.1;
+          t = frameTime.time;
+          nbSameValue = 0;
         }
       }
     }
