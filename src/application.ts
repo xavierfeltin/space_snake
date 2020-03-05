@@ -107,7 +107,7 @@ export class Application {
             new Speed(7),
             new Position(new Vect2D(600, 400)),
             new Velocity(new Vect2D(1, 0)),
-            new Orientation(0),
+            new Orientation(Math.random() * 360),
             new Radar(40, this.sizeRadar),
             new RigidBody(20), //20 is the radius of the rigid body
             new Score()
@@ -215,23 +215,24 @@ export class Application {
             let rewardTravel = traveledDistance / 7;
 
             const newDistance = posShip.position.distance2(posBeacon.position);
-            let rewardDistance = -1; // do not follow objective
+            let rewardDistance = 0; // do not follow objective
             if (newDistance < prevDistance) {
                 rewardDistance = 1;
             }
 
-            let rewardOrientation = -1; // do not follow objective
+            let rewardOrientation = 0; // do not follow objective
             if ((prevRadarDir != null && newRadarDir != null) && (Math.abs(newRadarDir) < Math.abs(prevRadarDir) || ((prevRadarDir == 0) && (newRadarDir == 0)))) {
                 rewardOrientation = 1;
             }
+            
+            rewardOrientation = 1 - (Math.abs(newRadarDir) / 180);
 
             let rewardScore = 0;
             if ((score - prevScore) > 0) {
                 rewardScore = 10;
             }
 
-            return rewardDistance + /*rewardTravel*/ + rewardOrientation + rewardScore; //used as recompense
-            //return (score.score - prevScore.score) * 10; //used as recompense
+            return rewardOrientation + (score - prevScore); //used as recompense
         }
         else {
             return -10; //ship is dead
@@ -298,7 +299,7 @@ export class Application {
             let step = 0;
             let deadStep = null;
             let score = 0;
-            while (step < 1000 && (reward == null || reward != -10)){
+            while (step < 600 && (reward == null || reward != -10)){
                 // pick an action
                 let act = agent.pickAction(st, eps);
 
@@ -400,19 +401,34 @@ export class Application {
         let worldState = new WorldState();
 
         const game = this.em.selectGlobal('gameState')?.get('GameState') as GameState;
-        if (game.isRunning())
-        {
-            const entities = this.em.select(['Radar', 'Position']);
+        const isRunning = game.isRunning() ? 1 : 0;
+        
+        if (isRunning) {
+            let entities = this.em.select(['Radar', 'Position', 'Orientation', 'Velocity', 'Ship']);
+            let ship = new Position(new Vect2D(0,0));
             for (let [entity, componentsMap] of entities.entries()) {
                 let radar = componentsMap.get('Radar') as Radar;
-                let position = componentsMap.get('Position') as Position;
-                worldState.state = [...radar.state, radar.direction || 0];
+                ship = componentsMap.get('Position') as Position;
+                let vel = componentsMap.get('Velocity') as Velocity;
+                let ori = componentsMap.get('Orientation') as Orientation;
+    
+                // radar vision, delta angle to target, current ship position, current ship orientation, dead? 
+                worldState.state = [...radar.state, Math.round(ori.angle)];
             }
-        } else {
-            const nbRadarCells = this.sizeRadar * this.sizeRadar;
-            worldState.state = Array<number>(nbRadarCells + 1).fill(-1);
-        }
 
+            entities = this.em.select(['Position', 'Beacon']);
+            for (let [entity, componentsMap] of entities.entries()) {
+                let pos = componentsMap.get('Position') as Position;
+                const dist = pos.position.distance(ship.position);
+                worldState.state.push(Math.round(dist));
+            }
+
+        }
+        else {
+            worldState.state = Array<number>(27).fill(-1);
+        }
+        
+        
         return worldState;
     }
 

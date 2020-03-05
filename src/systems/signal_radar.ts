@@ -57,7 +57,7 @@ export class SignalRadar implements System<UpdateContext> {
 
             // Check against game area
             if (topLeftCorner.x < 0 || bottomRightCorner.x > area.width || topLeftCorner.y < 0 || bottomRightCorner.y > area.height) {
-                newState[indexCell] = 2;
+                newState[indexCell] += 2;
             }
 
             radarX = radarX + radar.cellSize;

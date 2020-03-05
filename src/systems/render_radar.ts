@@ -90,6 +90,8 @@ export class RenderRadar implements System<UpdateContext> {
       ctx.fillStyle = "green";
     } else if (state == 2) {
       ctx.fillStyle = "red";
+    } else if (state == 3) {
+      ctx.fillStyle = "grey";
     }
 
     ctx.globalAlpha = 0.4;

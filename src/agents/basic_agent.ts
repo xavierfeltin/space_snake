@@ -7,7 +7,7 @@ export class BasicAgent implements Agent {
 
     private model: tf.LayersModel;
     private model_optimizer: tf.AdamOptimizer;
-    private nbInputs = 26; //25 radar + orientation
+    private nbInputs = 27; //25 radar + orientation
     private nbActions = 3;
 
     constructor() {
@@ -15,9 +15,7 @@ export class BasicAgent implements Agent {
         // Input
         const input = tf.input({batchShape: [null, this.nbInputs]});
         // Hidden layer
-        const layer0 = tf.layers.dense({useBias: true, units: 32, activation: 'relu'}).apply(input);
-        // Hidden layer
-        const layer = tf.layers.dense({useBias: true, units: 32, activation: 'relu'}).apply(layer0);
+        const layer = tf.layers.dense({useBias: true, units: 32, activation: 'relu'}).apply(input);
         // Output layer
         const output = tf.layers.dense({useBias: true, units: this.nbActions, activation: 'linear'}).apply(layer) as tf.SymbolicTensor;
         // Create the model

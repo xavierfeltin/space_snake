@@ -49,6 +49,12 @@ export class DetectCollisions implements System<UpdateContext> {
             }
           }
 
+          // detection between static elements
+          if (velA.velocity.x == 0 && velA.velocity.y == 0 
+            && velB.velocity.x == 0 && velB.velocity.y == 0) {
+            break;
+          }
+
           if (entityA !== entityB && !alreadyCollidedThisFrame) {
             // detect collisions
             const newCollision = CollisionHelper.detectCollision(
