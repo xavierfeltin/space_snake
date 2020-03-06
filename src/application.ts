@@ -65,7 +65,7 @@ export class Application {
         this.then = 0;
         this.fps = 30;
         this.interval = 1000 / this.fps;
-        this.sizeRadar = 5;
+        this.sizeRadar = 3;
         this.em = new EntityManager<UpdateContext>();
         this.canvas2D = null;
         gApplication = this;
@@ -173,7 +173,7 @@ export class Application {
             }
 
             const prevPos = posShip.position;
-            const prevDistance = posShip.position.distance2(posBeacon.position);
+            const prevDistance = posShip.position.distance(posBeacon.position);
 
             const inputs = this.em.selectGlobal('inputs')?.get('Inputs') as Inputs;
             inputs.addInput(action);
@@ -194,7 +194,8 @@ export class Application {
 
             entities = this.em.select(['Position', 'Radar', 'Ship']);
             posShip = new Position(new Vect2D(0,0));
-            let newRadarDir: number | null = null
+            let newRadarDir: number | null = null;
+            let radarRedReward = 0;
             for (let [entity, componentsMap] of entities.entries()) {
                 let p = componentsMap.get('Position') as Position;
                 posShip.position.x = p.position.x;
@@ -202,6 +203,13 @@ export class Application {
 
                 let r = componentsMap.get('Radar') as Radar;
                 newRadarDir = r.direction;
+
+                for (let i = 0; i < r.state.length; i++) {
+                    if (r.state[i] == 1) {
+                        radarRedReward = -1;
+                        break;
+                    }
+                }
             }
 
             entities = this.em.select(['Position', 'Beacon']);
@@ -210,29 +218,42 @@ export class Application {
                 posBeacon = componentsMap.get('Position') as Position;
             }
 
+            /*
             const newPos = posShip.position;
             const traveledDistance = prevPos.distance(newPos);
             let rewardTravel = traveledDistance / 7;
+            */
 
-            const newDistance = posShip.position.distance2(posBeacon.position);
-            let rewardDistance = 0; // do not follow objective
-            if (newDistance < prevDistance) {
-                rewardDistance = 1;
+            const newDistance = posShip.position.distance(posBeacon.position);
+            //let rewardDistance = 0; // do not follow objective
+            //if (newDistance < prevDistance) {
+            //    rewardDistance = 1;
+            //}
+
+            let rewardTravel = newDistance - prevDistance;
+            if (newDistance > prevDistance) {
+                rewardTravel = rewardTravel * -1;
             }
 
+            /*
             let rewardOrientation = 0; // do not follow objective
-            if ((prevRadarDir != null && newRadarDir != null) && (Math.abs(newRadarDir) < Math.abs(prevRadarDir) || ((prevRadarDir == 0) && (newRadarDir == 0)))) {
+            if ((prevRadarDir != null && newRadarDir != null)
+                && (Math.abs(newRadarDir) < Math.abs(prevRadarDir) || ((prevRadarDir == 0) && (newRadarDir == 0)))) {
                 rewardOrientation = 1;
             }
-            
-            rewardOrientation = 1 - (Math.abs(newRadarDir) / 180);
+            */
+            const rewardOrientation = 1 - (Math.abs(newRadarDir) / 180);
 
             let rewardScore = 0;
-            if ((score - prevScore) > 0) {
-                rewardScore = 10;
+            if ((score - prevScore) > 0) { // previous beacon has been picked up
+                return rewardScore = 10;
+            }
+            else {
+                return (rewardTravel / 7) + rewardOrientation;
             }
 
-            return rewardOrientation + (score - prevScore); //used as recompense
+            //return rewardOrientation + (score - prevScore); //used as recompense
+            // return rewardTravel + rewardScore;
         }
         else {
             return -10; //ship is dead
@@ -294,19 +315,19 @@ export class Application {
         let st = this.buildWorldState();
         let st2;
 
-        for (let epi=0; epi < 200; epi++){
+        for (let epi=0; epi < 1500; epi++){
             let reward = null;
             let step = 0;
             let deadStep = null;
             let score = 0;
-            while (step < 600 && (reward == null || reward != -10)){
+            while (step < 400 && (reward == null || reward != -10)){
                 // pick an action
                 let act = agent.pickAction(st, eps);
 
                 const directions = ['left', 'right', 'straignt'];
                 reward = this.step(directions[act]);
 
-                if (reward == -10 && deadStep == null) {
+                if (reward == -10) {
                     deadStep = step;
                 }
                 else if (reward == 10) {
@@ -344,7 +365,7 @@ export class Application {
             eps = Math.max(0.1, eps*0.99);
 
             // Train model every 5 episodes
-            if (epi % 5 == 0 && epi >= 5){
+            if (epi % 5 == 0){
                 const meanReward = MyMath.mean(reward_mean);
                 const meanLoss = agent.train_model(states, actions, rewards, next_states);
                 this.trainMeans.push(meanReward || -100);
@@ -353,6 +374,7 @@ export class Application {
                 console.log("---------------");
                 console.log("rewards mean", meanReward);
                 console.log("losses mean", meanLoss);
+                console.log("last epsilon", eps);
                 console.log("episode", epi);
 
                 const trainingDiv = document.querySelector('#training');
@@ -402,7 +424,7 @@ export class Application {
 
         const game = this.em.selectGlobal('gameState')?.get('GameState') as GameState;
         const isRunning = game.isRunning() ? 1 : 0;
-        
+
         if (isRunning) {
             let entities = this.em.select(['Radar', 'Position', 'Orientation', 'Velocity', 'Ship']);
             let ship = new Position(new Vect2D(0,0));
@@ -410,25 +432,29 @@ export class Application {
                 let radar = componentsMap.get('Radar') as Radar;
                 ship = componentsMap.get('Position') as Position;
                 let vel = componentsMap.get('Velocity') as Velocity;
+                let normVel = vel.velocity;
+                normVel.normalize();
                 let ori = componentsMap.get('Orientation') as Orientation;
-    
-                // radar vision, delta angle to target, current ship position, current ship orientation, dead? 
-                worldState.state = [...radar.state, Math.round(ori.angle)];
+
+                // radar vision, delta angle to target, current ship position, current ship orientation, dead?
+                //worldState.state = [...radar.state, Math.round(ori.angle)];
+                worldState.state = [...radar.state, Math.round(radar.direction||0) / 180, Math.round(ori.angle) / 360];
             }
 
+            /*
             entities = this.em.select(['Position', 'Beacon']);
             for (let [entity, componentsMap] of entities.entries()) {
                 let pos = componentsMap.get('Position') as Position;
                 const dist = pos.position.distance(ship.position);
                 worldState.state.push(Math.round(dist));
             }
-
+            */
         }
         else {
-            worldState.state = Array<number>(27).fill(-1);
+            worldState.state = Array<number>(11).fill(1);
         }
-        
-        
+
+
         return worldState;
     }
 

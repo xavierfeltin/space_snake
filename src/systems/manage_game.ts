@@ -10,7 +10,6 @@ export class ManageGame implements System<UpdateContext> {
     const entities = em.select(['Ship']);
 
     if (entities.size == 0) { //only one ship
-        console.log('end game');
         gameState.ending();
         em.addComponents('gameState', gameState);
     }

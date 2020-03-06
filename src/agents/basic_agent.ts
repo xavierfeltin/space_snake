@@ -7,15 +7,15 @@ export class BasicAgent implements Agent {
 
     private model: tf.LayersModel;
     private model_optimizer: tf.AdamOptimizer;
-    private nbInputs = 27; //25 radar + orientation
+    private nbInputs = 11; //25 radar + orientation
     private nbActions = 3;
 
     constructor() {
         // Create the model
         // Input
         const input = tf.input({batchShape: [null, this.nbInputs]});
-        // Hidden layer
-        const layer = tf.layers.dense({useBias: true, units: 32, activation: 'relu'}).apply(input);
+        // Hidden layer        ;
+        const layer = tf.layers.dense({useBias: true, units: 128, activation: 'relu'}).apply(input);
         // Output layer
         const output = tf.layers.dense({useBias: true, units: this.nbActions, activation: 'linear'}).apply(layer) as tf.SymbolicTensor;
         // Create the model
@@ -35,6 +35,7 @@ export class BasicAgent implements Agent {
 
     // Train the model
     public train_model(states: tf.TensorLike2D, actions: tf.TensorLike2D, rewards: tf.TensorLike2D, next_states: tf.TensorLike2D): number | null{
+
         var size = next_states.length;
         // Transform each array into a tensor
         let tf_states = tf.tensor2d(states, [states.length, this.nbInputs]);
@@ -88,7 +89,8 @@ export class BasicAgent implements Agent {
     // Pick an action eps-greedy
     public pickAction(worldState: WorldState, epsilon: number): number{
         if (Math.random() < epsilon){ // Pick a random action
-            return Math.floor(Math.random() * this.nbActions);
+            const action = Math.floor(Math.random() * this.nbActions)
+            return action;
         }
         else {
             let st = worldState.state;
