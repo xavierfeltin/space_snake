@@ -249,7 +249,7 @@ export class Application {
                 return rewardScore = 10;
             }
             else {
-                return (rewardTravel / 7) + rewardOrientation;
+                return 0;
             }
 
             //return rewardOrientation + (score - prevScore); //used as recompense
@@ -315,12 +315,12 @@ export class Application {
         let st = this.buildWorldState();
         let st2;
 
-        for (let epi=0; epi < 1500; epi++){
+        for (let epi=0; epi < 150; epi++){
             let reward = null;
             let step = 0;
             let deadStep = null;
             let score = 0;
-            while (step < 400 && (reward == null || reward != -10)){
+            while (step < 800 && (reward == null || reward != -10)){
                 // pick an action
                 let act = agent.pickAction(st, eps);
 
