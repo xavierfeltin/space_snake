@@ -86,16 +86,9 @@ export class RenderRadar implements System<UpdateContext> {
 
     ctx.save(); // save current state
 
-    /*
     if (state == 1) {
       ctx.fillStyle = "green";
-    } else if (state == 2) {
-      ctx.fillStyle = "red";
-    } else if (state == 3) {
-      ctx.fillStyle = "grey";
-    }
-    */
-    if (state == 1) {
+    } else if (state == -1) {
       ctx.fillStyle = "red";
     }
 

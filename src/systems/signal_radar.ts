@@ -48,18 +48,16 @@ export class SignalRadar implements System<UpdateContext> {
             newState[indexCell] = 0;
 
             // Check against game objects
-            /*
             for (let [entityObject, componentsMapObjects] of entities.entries()) {
                 const pos = componentsMapObjects.get('Position') as Position;
                 if (MyMath.isPointInRectangle(topLeftCorner, bottomRightCorner, pos.position)) {
                     newState[indexCell] = 1;
                 }
             }
-            */
 
             // Check against game area
             if (topLeftCorner.x < 0 || bottomRightCorner.x > area.width || topLeftCorner.y < 0 || bottomRightCorner.y > area.height) {
-                newState[indexCell] = 1;
+                newState[indexCell] = -1;
             }
 
             radarX = radarX + radar.cellSize;

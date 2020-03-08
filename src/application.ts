@@ -65,7 +65,7 @@ export class Application {
         this.then = 0;
         this.fps = 30;
         this.interval = 1000 / this.fps;
-        this.sizeRadar = 3;
+        this.sizeRadar = 5;
         this.em = new EntityManager<UpdateContext>();
         this.canvas2D = null;
         gApplication = this;
@@ -114,14 +114,16 @@ export class Application {
         ]);
 
         // these ones will be static
-        this.em.addEntity([
-            new Beacon(),
-            new Position(new Vect2D(50 + Math.random()*1100, 50 + Math.random()*700)),
-            new Velocity(new Vect2D(0, 0)),
-            new RigidBody(20),
-            new Renderer('(0,0,0)', 100, 100)
-        ]);
-
+        for (let i = 0; i < 10; i++) {
+            this.em.addEntity([
+                new Beacon(),
+                new Position(new Vect2D(50 + Math.random()*1100, 50 + Math.random()*700)),
+                new Velocity(new Vect2D(0, 0)),
+                new RigidBody(20),
+                new Renderer('(0,0,0)', 100, 100)
+            ]);
+        }
+                
         // Global entities
         this.em.addGlobalEntity('frame', [new FrameTime]);
         this.em.addGlobalEntity('collisions', [new Collisions]);
@@ -204,12 +206,20 @@ export class Application {
                 let r = componentsMap.get('Radar') as Radar;
                 newRadarDir = r.direction;
 
+                /*
                 for (let i = 0; i < r.state.length; i++) {
+                    let bonus = 1;
+                    if (i in [6,7,8,11,13,14,16,17,18]) {
+                        bonus = 2;
+                    }
+
                     if (r.state[i] == 1) {
-                        radarRedReward = -1;
-                        break;
+                        radarRedReward += 1 * bonus;
+                    } else if (r.state[i] == -1) {
+                        radarRedReward -= 1 * bonus;
                     }
                 }
+                */
             }
 
             entities = this.em.select(['Position', 'Beacon']);
@@ -245,18 +255,19 @@ export class Application {
             const rewardOrientation = 1 - (Math.abs(newRadarDir) / 180);
 
             let rewardScore = 0;
+
             if ((score - prevScore) > 0) { // previous beacon has been picked up
-                return rewardScore = 10;
+                return 10;
             }
             else {
-                return 0;
+                return 0 //radarRedReward; //(posShip.position.distance(prevPos)) / 7;
             }
 
             //return rewardOrientation + (score - prevScore); //used as recompense
             // return rewardTravel + rewardScore;
         }
         else {
-            return -10; //ship is dead
+            return -100; //ship is dead
         }
     }
 
@@ -315,26 +326,28 @@ export class Application {
         let st = this.buildWorldState();
         let st2;
 
-        for (let epi=0; epi < 150; epi++){
+        for (let epi=0; epi < 200; epi++){
             let reward = null;
             let step = 0;
             let deadStep = null;
             let score = 0;
-            while (step < 800 && (reward == null || reward != -10)){
+            let totalReward = 0;
+            while (step < 600 && (reward == null || reward != -100)){
                 // pick an action
                 let act = agent.pickAction(st, eps);
 
                 const directions = ['left', 'right', 'straignt'];
                 reward = this.step(directions[act]);
+                totalReward += reward;
 
-                if (reward == -10) {
+                if (reward == -100) {
                     deadStep = step;
                 }
                 else if (reward == 10) {
                     score++;
                 }
 
-                st2 = this.buildWorldState();
+                st2 = this.buildWorldState(step);
 
                 let mask = [0, 0, 0];
                 mask[act] = 1;
@@ -359,10 +372,10 @@ export class Application {
                 st = st2;
                 step += 1;
             }
-            console.log('game score: ' + score + ', dead at step: ' + deadStep);
+            console.log('game score: ' + score + ', dead at step: ' + deadStep + ' total reward: ' + totalReward);
 
             // Decrease epsilon
-            eps = Math.max(0.1, eps*0.99);
+            eps = Math.max(0.1, eps*0.995);
 
             // Train model every 5 episodes
             if (epi % 5 == 0){
@@ -419,7 +432,7 @@ export class Application {
         }
     }
 
-    private buildWorldState(): WorldState {
+    private buildWorldState(step: number = 0): WorldState {
         let worldState = new WorldState();
 
         const game = this.em.selectGlobal('gameState')?.get('GameState') as GameState;
@@ -434,11 +447,15 @@ export class Application {
                 let vel = componentsMap.get('Velocity') as Velocity;
                 let normVel = vel.velocity;
                 normVel.normalize();
+                
                 let ori = componentsMap.get('Orientation') as Orientation;
+                let head = ori.heading;
+                head.normalize();
 
                 // radar vision, delta angle to target, current ship position, current ship orientation, dead?
                 //worldState.state = [...radar.state, Math.round(ori.angle)];
-                worldState.state = [...radar.state, Math.round(radar.direction||0) / 180, Math.round(ori.angle) / 360];
+                //worldState.state = [...radar.state, Math.round(radar.direction||0), Math.round(ship.pos.x), Math.round(ship.pos.y), head.x, head.y];
+                worldState.state = [...radar.state,  Math.round(ship.pos.x)/1200, Math.round(ship.pos.y)/800, normVel.x, normVel.y];
             }
 
             /*
@@ -449,11 +466,23 @@ export class Application {
                 worldState.state.push(Math.round(dist));
             }
             */
+
+            /*
+           entities = this.em.select(['Score']);
+           for (let [entity, componentsMap] of entities.entries()) {
+               let s = componentsMap.get('Score') as Score;
+               worldState.state.push(s.score);
+           }
+           worldState.state.push(step);
+           */
         }
         else {
-            worldState.state = Array<number>(11).fill(1);
+            worldState.state = Array<number>(25).fill(1);
+            worldState.state.push(-1);
+            worldState.state.push(-1);
+            worldState.state.push(-1);
+            worldState.state.push(-1);
         }
-
 
         return worldState;
     }
