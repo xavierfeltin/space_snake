@@ -76,6 +76,10 @@ export class Application {
     }
 
     public init(): void {
+        const wArea = 1200;
+        const hArea = 800;
+        const sizeCell = 40;
+
         if (this.canvas2D) {
             this.canvas2D.clearRect(0, 0, 1200, 800);
         }
@@ -108,7 +112,7 @@ export class Application {
             new Position(new Vect2D(600, 400)),
             new Velocity(new Vect2D(1, 0)),
             new Orientation(Math.random() * 360),
-            new Radar(40, this.sizeRadar),
+            new Radar(sizeCell, wArea / sizeCell, hArea / sizeCell),
             new RigidBody(20), //20 is the radius of the rigid body
             new Score()
         ]);
@@ -129,10 +133,11 @@ export class Application {
         this.em.addGlobalEntity('collisions', [new Collisions]);
         this.em.addGlobalEntity('previousCollision', [new Collisions]);
          this.em.addGlobalEntity('inputs', [new Inputs]);
+        
         this.em.addGlobalEntity('area', [
-            new Area(1200, 800),
+            new Area(wArea, hArea, sizeCell),
             new Position(new Vect2D(0, 0)),
-            new Renderer('(0,0,0)', 1200, 800)
+            new Renderer('(0,0,0)', wArea, hArea)
         ]);
         this.em.addGlobalEntity('gameState', [new GameState]);
     }

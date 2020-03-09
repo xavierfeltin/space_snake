@@ -32,17 +32,27 @@ export class SignalRadar implements System<UpdateContext> {
   }
 
   private computeRadar(radar: Radar, positionShip: Position, area: Area, entities:  Map<string, Map<string, IComponent>>) : number[]{
-    const beginX = positionShip?.position.x - (0.5 * radar.cellSize * radar.size);
-    const beginY = positionShip?.position.y - (0.5 * radar.cellSize * radar.size);
+    const beginX = 0; //positionShip?.position.x - (0.5 * radar.cellSize * radar.size);
+    const beginY = 0; //positionShip?.position.y - (0.5 * radar.cellSize * radar.size);
     let radarX = beginX;
     let radarY = beginY;
 
-    const newState = Array<number>(radar.size * radar.size).fill(0);
+    const newState = [...area.cartography];
 
-    for (let i = 0; i < radar.size; i++)
+    for (let [entityObject, componentsMapObjects] of entities.entries()) {
+      const pos = componentsMapObjects.get('Position') as Position;
+      const x = Math.floor(pos.position.x / 40);
+      const y = Math.floor(pos.position.y / 40);
+      console.log(x + ' / ' + y);
+      newState[y * area.widthMap + x] = 1;
+    }
+
+
+    /*
+    for (let i = 0; i < radar.height; i++)
     {
-        for (let j = 0; j < radar.size; j++) {
-            const indexCell = i*radar.size+j;
+        for (let j = 0; j < radar.width; j++) {
+            const indexCell = i * radar.width + j;
             const topLeftCorner = new Vect2D(radarX, radarY);
             const bottomRightCorner = new Vect2D(radarX + radar.cellSize, radarY + radar.cellSize);
             newState[indexCell] = 0;
@@ -56,15 +66,20 @@ export class SignalRadar implements System<UpdateContext> {
             }
 
             // Check against game area
-            if (topLeftCorner.x < 0 || bottomRightCorner.x > area.width || topLeftCorner.y < 0 || bottomRightCorner.y > area.height) {
-                newState[indexCell] = -1;
+            if (area.cartography[indexCell] == -1) {
+              newState[indexCell] = area.cartography[indexCell];
             }
+
+            //if (topLeftCorner.x < 0 || bottomRightCorner.x > area.width || topLeftCorner.y < 0 || bottomRightCorner.y > area.height) {
+            //    newState[indexCell] = -1;
+            //}
 
             radarX = radarX + radar.cellSize;
         }
         radarX = beginX;
         radarY = radarY + radar.cellSize;
     }
+    */
 
     return newState;
   }

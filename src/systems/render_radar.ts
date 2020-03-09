@@ -25,20 +25,20 @@ export class RenderRadar implements System<UpdateContext> {
     const x = pos.position.x;
     const y = pos.position.y;
 
-    const beginX = (x - (0.5 * radar.cellSize * radar.size) + 0.5) | 0;
-    const beginY = (y - (0.5 * radar.cellSize * radar.size) + 0.5) | 0;
+    const beginX = 0; //(x - (0.5 * radar.cellSize * radar.size) + 0.5) | 0;
+    const beginY = 0; //(y - (0.5 * radar.cellSize * radar.size) + 0.5) | 0;
     let currentX = beginX;
     let currentY = beginY;
     const color = 'rgba(178, 34, 34)';
 
-    for (let i = 0; i < radar.size; i++)
+    for (let i = 0; i < radar.height; i++)
     {
-      for (let j = 0; j < radar.size; j++) {
+      for (let j = 0; j < radar.width; j++) {
         const topLeftCorrner = new Vect2D(currentX, currentY);
         this.renderCell(topLeftCorrner, radar.cellSize, color, ctx);
 
         //ctx.globalAlpha = 0.2;
-        this.colorCell(topLeftCorrner, radar.state[i*radar.size+j], radar.cellSize, ctx);
+        this.colorCell(topLeftCorrner, radar.state[i * radar.width + j], radar.cellSize, ctx);
         //ctx.globalAlpha = 1.0;
 
         currentX = currentX + radar.cellSize;
@@ -105,20 +105,6 @@ export class RenderRadar implements System<UpdateContext> {
     ctx.strokeStyle = 'blue';
 
     ctx.moveTo(pos.x, pos.y);
-
-    /*
-    let angle = 0;
-    switch(direction) {
-      case 1: angle = -45; break;
-      case 2: angle = -90; break;
-      case 3: angle = -135; break;
-      case 4: angle = -180; break;
-      case 5: angle = 135; break;
-      case 6: angle = 90; break;
-      case 7: angle = 45; break;
-      default: angle = 0; break;
-    }
-    */
 
     const angle = (direction + orientation) * Math.PI / 180;
     const len = 50;
