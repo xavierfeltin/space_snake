@@ -41,7 +41,7 @@ export class DetectCollisions implements System<UpdateContext> {
 
           let alreadyCollidedThisFrame = false;
           for (const prevColl of prevCollision.collisions) {
-            
+
             if ((prevColl.idA === entityA && prevColl.idB === entityB)
             || (prevColl.idA === entityB && prevColl.idB === entityA)) {
               alreadyCollidedThisFrame = true;
@@ -50,7 +50,7 @@ export class DetectCollisions implements System<UpdateContext> {
           }
 
           // detection between static elements
-          if (velA.velocity.x == 0 && velA.velocity.y == 0 
+          if (velA.velocity.x == 0 && velA.velocity.y == 0
             && velB.velocity.x == 0 && velB.velocity.y == 0) {
             break;
           }

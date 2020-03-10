@@ -118,22 +118,34 @@ export class Application {
         ]);
 
         // these ones will be static
+        const beacons = [];
+        beacons.push(new Vect2D(900, 500));
+        beacons.push(new Vect2D(900, 200));
+        beacons.push(new Vect2D(1000, 700));
+        beacons.push(new Vect2D(400, 200));
+        beacons.push(new Vect2D(80, 500));
+        beacons.push(new Vect2D(300, 300));
+        beacons.push(new Vect2D(450, 700));
+        beacons.push(new Vect2D(200, 80));
+        beacons.push(new Vect2D(1100, 320));
+        beacons.push(new Vect2D(700, 400));
+
         for (let i = 0; i < 10; i++) {
             this.em.addEntity([
                 new Beacon(),
-                new Position(new Vect2D(50 + Math.random()*1100, 50 + Math.random()*700)),
+                new Position(beacons[i]), //(new Vect2D(50 + Math.random()*1100, 50 + Math.random()*700)),
                 new Velocity(new Vect2D(0, 0)),
                 new RigidBody(20),
                 new Renderer('(0,0,0)', 100, 100)
             ]);
         }
-                
+
         // Global entities
         this.em.addGlobalEntity('frame', [new FrameTime]);
         this.em.addGlobalEntity('collisions', [new Collisions]);
         this.em.addGlobalEntity('previousCollision', [new Collisions]);
          this.em.addGlobalEntity('inputs', [new Inputs]);
-        
+
         this.em.addGlobalEntity('area', [
             new Area(wArea, hArea, sizeCell),
             new Position(new Vect2D(0, 0)),
@@ -272,7 +284,7 @@ export class Application {
             // return rewardTravel + rewardScore;
         }
         else {
-            return -100; //ship is dead
+            return game.isSuccess() ? 100 : -100; //all beacons have been picked or ship is dead...
         }
     }
 
@@ -331,13 +343,19 @@ export class Application {
         let st = this.buildWorldState();
         let st2;
 
-        for (let epi=0; epi < 200; epi++){
-            let reward = null;
+        for (let epi=0; epi < 400; epi++){
             let step = 0;
             let deadStep = null;
+            let victoryStep = null;
+
+            let reward = 0;
             let score = 0;
             let totalReward = 0;
-            while (step < 600 && (reward == null || reward != -100)){
+
+            const rewardForDeath = -100;
+            const rewardForVictory = 100;
+
+            while (step < 1200 && reward != rewardForDeath && reward != rewardForVictory) {
                 // pick an action
                 let act = agent.pickAction(st, eps);
 
@@ -345,11 +363,14 @@ export class Application {
                 reward = this.step(directions[act]);
                 totalReward += reward;
 
-                if (reward == -100) {
+                if (reward == rewardForDeath) {
                     deadStep = step;
                 }
                 else if (reward == 10) {
                     score++;
+                }
+                else if (reward == rewardForVictory) {
+                    victoryStep = step;
                 }
 
                 st2 = this.buildWorldState(step);
@@ -377,7 +398,7 @@ export class Application {
                 st = st2;
                 step += 1;
             }
-            console.log('game score: ' + score + ', dead at step: ' + deadStep + ' total reward: ' + totalReward);
+            console.log(`game score: ${score}, dead at step: ${deadStep}, victory at step: ${victoryStep}, total reward: ${totalReward}`);
 
             // Decrease epsilon
             eps = Math.max(0.1, eps*0.995);
@@ -452,15 +473,17 @@ export class Application {
                 let vel = componentsMap.get('Velocity') as Velocity;
                 let normVel = vel.velocity;
                 normVel.normalize();
-                
+
                 let ori = componentsMap.get('Orientation') as Orientation;
                 let head = ori.heading;
                 head.normalize();
 
+
+
                 // radar vision, delta angle to target, current ship position, current ship orientation, dead?
                 //worldState.state = [...radar.state, Math.round(ori.angle)];
                 //worldState.state = [...radar.state, Math.round(radar.direction||0), Math.round(ship.pos.x), Math.round(ship.pos.y), head.x, head.y];
-                worldState.state = [...radar.state,  Math.round(ship.pos.x)/1200, Math.round(ship.pos.y)/800, normVel.x, normVel.y];
+                worldState.state = [...radar.state];
             }
 
             /*
@@ -482,11 +505,7 @@ export class Application {
            */
         }
         else {
-            worldState.state = Array<number>(25).fill(1);
-            worldState.state.push(-1);
-            worldState.state.push(-1);
-            worldState.state.push(-1);
-            worldState.state.push(-1);
+            worldState.state = Array<number>(600).fill(-1);
         }
 
         return worldState;

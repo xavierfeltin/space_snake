@@ -60,7 +60,7 @@ export class Collide implements System<UpdateContext> {
       if (idBeacon && idShip) {
         this.deleteBeacon(idBeacon, em);
         this.updateScore(idShip, scoreComponent, em);
-        this.spawnBeacon(em);
+        // this.spawnBeacon(em);
       }
       else if (idArea && idShip) {
         this.gameOver(idShip, scoreComponent, em);

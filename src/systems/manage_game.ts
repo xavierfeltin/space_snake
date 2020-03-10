@@ -7,11 +7,17 @@ export class ManageGame implements System<UpdateContext> {
 
   onUpdate(em: EntityManager<UpdateContext>, context: UpdateContext): void {
     const gameState = em.selectGlobal('gameState')?.get('GameState') as GameState;
-    const entities = em.select(['Ship']);
+    const entitiesShip = em.select(['Ship']);
+    const entitiesBeacons = em.select(['Beacon']);
 
-    if (entities.size == 0) { //only one ship
-        gameState.ending();
-        em.addComponents('gameState', gameState);
+    // Player is dead
+    if (entitiesShip.size == 0) { //only one ship
+      gameState.ending(false);
+      em.addComponents('gameState', gameState);
+    }
+    else if (entitiesBeacons.size == 0) { //get all beacons
+      gameState.ending(true);
+      em.addComponents('gameState', gameState);
     }
   }
 }

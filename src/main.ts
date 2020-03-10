@@ -13,7 +13,7 @@ function startGame(canvas: HTMLCanvasElement) {
       app.resetApplication();
       app.setCanvas(ctx);
       app.init();
-      //app.addAgent(agent);
+      app.addAgent(agent);
       app.run();
     }
   }

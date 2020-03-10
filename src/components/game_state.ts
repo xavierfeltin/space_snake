@@ -4,6 +4,8 @@ export class GameState implements IComponent {
   kind = 'GameState';
 
   private state: number = -1;
+  private success: boolean = false;
+
   constructor() {
     this.running();
   }
@@ -12,8 +14,9 @@ export class GameState implements IComponent {
     this.state = 1;
   }
 
-  public ending() {
+  public ending(isSuccess: boolean) {
     this.state = 0;
+    this.success = isSuccess;
   }
 
   public isRunning() {
@@ -22,5 +25,9 @@ export class GameState implements IComponent {
 
   public isEnding() {
       return this.state === 0;
+  }
+
+  public isSuccess() {
+    return this.success;
   }
 }
