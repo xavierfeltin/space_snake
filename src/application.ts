@@ -111,7 +111,7 @@ export class Application {
             new Speed(7),
             new Position(new Vect2D(600, 400)),
             new Velocity(new Vect2D(1, 0)),
-            new Orientation(Math.random() * 360),
+            new Orientation(0),
             new Radar(sizeCell, wArea / sizeCell, hArea / sizeCell),
             new RigidBody(20), //20 is the radius of the rigid body
             new Score()
@@ -274,7 +274,7 @@ export class Application {
             let rewardScore = 0;
 
             if ((score - prevScore) > 0) { // previous beacon has been picked up
-                return 10;
+                return 1;
             }
             else {
                 return 0 //radarRedReward; //(posShip.position.distance(prevPos)) / 7;
@@ -284,7 +284,7 @@ export class Application {
             // return rewardTravel + rewardScore;
         }
         else {
-            return game.isSuccess() ? 100 : -100; //all beacons have been picked or ship is dead...
+            return game.isSuccess() ? 10 : -1; //all beacons have been picked or ship is dead...
         }
     }
 
@@ -343,7 +343,7 @@ export class Application {
         let st = this.buildWorldState();
         let st2;
 
-        for (let epi=0; epi < 400; epi++){
+        for (let epi=0; epi < 150; epi++){
             let step = 0;
             let deadStep = null;
             let victoryStep = null;
@@ -352,8 +352,8 @@ export class Application {
             let score = 0;
             let totalReward = 0;
 
-            const rewardForDeath = -100;
-            const rewardForVictory = 100;
+            const rewardForDeath = -1;
+            const rewardForVictory = 10;
 
             while (step < 1200 && reward != rewardForDeath && reward != rewardForVictory) {
                 // pick an action
@@ -366,7 +366,7 @@ export class Application {
                 if (reward == rewardForDeath) {
                     deadStep = step;
                 }
-                else if (reward == 10) {
+                else if (reward == 1) {
                     score++;
                 }
                 else if (reward == rewardForVictory) {
@@ -405,6 +405,8 @@ export class Application {
 
             // Train model every 5 episodes
             if (epi % 5 == 0){
+                //eps = Math.max(0.1, eps*0.99);
+
                 const meanReward = MyMath.mean(reward_mean);
                 const meanLoss = agent.train_model(states, actions, rewards, next_states);
                 this.trainMeans.push(meanReward || -100);
@@ -483,7 +485,7 @@ export class Application {
                 // radar vision, delta angle to target, current ship position, current ship orientation, dead?
                 //worldState.state = [...radar.state, Math.round(ori.angle)];
                 //worldState.state = [...radar.state, Math.round(radar.direction||0), Math.round(ship.pos.x), Math.round(ship.pos.y), head.x, head.y];
-                worldState.state = [...radar.state];
+                worldState.state = [...radar.state, normVel.x, normVel.y];
             }
 
             /*
@@ -506,6 +508,8 @@ export class Application {
         }
         else {
             worldState.state = Array<number>(600).fill(-1);
+            worldState.state.push(-1);
+            worldState.state.push(-1);
         }
 
         return worldState;
