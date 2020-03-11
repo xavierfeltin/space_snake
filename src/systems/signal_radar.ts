@@ -46,9 +46,11 @@ export class SignalRadar implements System<UpdateContext> {
       newState[y * area.widthMap + x] = 1;
     }
 
+    /*
     const x = Math.floor(positionShip.position.x / 40);
     const y = Math.floor(positionShip.position.y / 40);
     newState[y * area.widthMap + x] = 2;
+    */
 
     /*
     for (let i = 0; i < radar.height; i++)

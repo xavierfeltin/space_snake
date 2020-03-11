@@ -10,10 +10,11 @@ function startGame(canvas: HTMLCanvasElement) {
     }
 
     if (ctx) {
+      const isTurnBased = true;
       app.resetApplication();
       app.setCanvas(ctx);
-      app.init();
-      app.addAgent(agent);
+      app.init(isTurnBased);
+      //app.addAgent(agent);
       app.run();
     }
   }

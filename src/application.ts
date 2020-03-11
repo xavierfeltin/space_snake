@@ -7,6 +7,7 @@ import { Area } from "./components/area";
 import { Position } from "./components/position";
 import { Velocity } from "./components/velocity";
 import { Orientation } from "./components/orientation";
+
 import { RenderArea } from "./systems/render_area";
 import { Renderer } from "./components/renderer";
 import { RenderShip } from "./systems/render_ship";
@@ -14,24 +15,32 @@ import { RenderBeacon } from "./systems/render_beacon";
 import { Orientate } from "./systems/orientate";
 import { Solve } from "./systems/solve";
 import { Turn } from "./systems/turn";
-import { Speed } from "./components/speed";
-import { Radar } from "./components/radar";
+import { SignalRadar } from "./systems/signal_radar";
+import { ManageGame } from "./systems/manage_game";
 import { RenderRadar } from "./systems/render_radar";
-import { RigidBody } from "./components/rigid_body";
-import { Collisions } from "./components/collision";
-import { DetectCollisions } from "./systems/detect_collisions";
 import { Collide } from "./systems/collide";
-import { FrameTime } from "./components/frame_time";
-import { Vect2D } from "./utils/vect2D";
 import { Clean } from "./systems/clean";
 import { RenderScore } from "./systems/render_score";
+import { DetectCollisions } from "./systems/detect_collisions";
+
+import { TurnSolve } from "./systems_turn/solve";
+import { TurnMove } from "./systems_turn/move";
+import { TurnDetectCollisions } from "./systems_turn/detect_collisions";
+
+import { Speed } from "./components/speed";
+import { Radar } from "./components/radar";
+
+import { RigidBody } from "./components/rigid_body";
+import { Collisions } from "./components/collision";
+import { FrameTime } from "./components/frame_time";
+import { Vect2D } from "./utils/vect2D";
 import { Score } from "./components/score";
 import { Inputs } from "./components/inputs";
 import { GameState } from "./components/game_state";
-import { ManageGame } from "./systems/manage_game";
+
 import { WorldState } from "./agents/world_state";
 import { Agent } from "./agents/agent";
-import { SignalRadar } from "./systems/signal_radar";
+
 import { MyMath } from "./utils/math";
 import * as tf from "@tensorflow/tfjs";
 
@@ -49,6 +58,7 @@ export class Application {
     private interval: number;
     private fps: number;
     private sizeRadar: number;
+    private isTurnBased: boolean;
 
     // agent
     private agent: Agent | null = null;
@@ -68,6 +78,7 @@ export class Application {
         this.sizeRadar = 5;
         this.em = new EntityManager<UpdateContext>();
         this.canvas2D = null;
+        this.isTurnBased = false;
         gApplication = this;
     }
 
@@ -75,10 +86,98 @@ export class Application {
         this.canvas2D = ctx;
     }
 
-    public init(): void {
+    public init(isTurnBased: boolean): void {
+        this.isTurnBased = isTurnBased;
+        if (isTurnBased) {
+            this.initByTurn();
+        } else {
+            this.initRT();
+        }
+    }
+
+    private initByTurn(): void {
         const wArea = 1200;
         const hArea = 800;
         const sizeCell = 40;
+        const speedByCell = 40;
+
+        if (this.canvas2D) {
+            this.canvas2D.clearRect(0, 0, 1200, 800);
+        }
+
+        this.em.clearAll();
+        //this.em.addSystem(new Solve(), 'Action');
+        this.em.addSystem(new TurnSolve(), 'Action');
+        this.em.addSystem(new TurnMove(), 'Physics'); //move first in turn by turn
+        this.em.addSystem(new TurnDetectCollisions(), 'Physics');
+        this.em.addSystem(new Collide(), 'Physics');
+        this.em.addSystem(new Clean(), 'Physics');
+        this.em.addSystem(new SignalRadar(), 'Physics');
+
+        if (this.canvas2D) {
+            this.em.addSystem(new RenderArea(), 'Rendering');
+            this.em.addSystem(new RenderBeacon(), 'Rendering');
+            this.em.addSystem(new RenderShip(), 'Rendering');
+            this.em.addSystem(new RenderRadar(), 'Rendering');
+            this.em.addSystem(new RenderScore(), 'Rendering');
+        }
+
+        this.em.addSystem(new ManageGame, 'State');
+
+        // Main player
+        this.em.addEntity([
+            new Ship(),
+            new Speed(speedByCell),
+            new Position(new Vect2D(620, 420)),
+            new Velocity(new Vect2D(1, 0)),
+            new Orientation(90),
+            new Radar(sizeCell, wArea / sizeCell, hArea / sizeCell),
+            new RigidBody(20), //20 is the radius of the rigid body
+            new Score()
+        ]);
+
+        // these ones will be static
+        const beacons = [];
+        beacons.push(new Vect2D(900, 500));
+        beacons.push(new Vect2D(900, 200));
+        beacons.push(new Vect2D(1000, 700));
+        beacons.push(new Vect2D(400, 200));
+        beacons.push(new Vect2D(80, 500));
+        beacons.push(new Vect2D(300, 300));
+        beacons.push(new Vect2D(450, 700));
+        beacons.push(new Vect2D(200, 80));
+        beacons.push(new Vect2D(1100, 320));
+        beacons.push(new Vect2D(700, 400));
+
+        for (let i = 0; i < 10; i++) {
+            this.em.addEntity([
+                new Beacon(),
+                new Position(beacons[i]), //(new Vect2D(50 + Math.random()*1100, 50 + Math.random()*700)),
+                new Velocity(new Vect2D(0, 0)),
+                new RigidBody(20),
+                new Renderer('(0,0,0)', 100, 100)
+            ]);
+        }
+
+        // Global entities
+        this.em.addGlobalEntity('frame', [new FrameTime]);
+        this.em.addGlobalEntity('collisions', [new Collisions]);
+        this.em.addGlobalEntity('previousCollision', [new Collisions]);
+         this.em.addGlobalEntity('inputs', [new Inputs]);
+
+        this.em.addGlobalEntity('area', [
+            new Area(wArea, hArea, sizeCell),
+            new Position(new Vect2D(0, 0)),
+            new Renderer('(0,0,0)', wArea, hArea)
+        ]);
+        this.em.addGlobalEntity('gameState', [new GameState]);
+    }
+
+    private initRT(): void {
+        const wArea = 1200;
+        const hArea = 800;
+        const sizeCell = 40;
+        const speedRT = 7;
 
         if (this.canvas2D) {
             this.canvas2D.clearRect(0, 0, 1200, 800);
@@ -86,7 +185,6 @@ export class Application {
 
         this.em.clearAll();
         this.em.addSystem(new Solve(), 'Action');
-
         this.em.addSystem(new Turn(), 'Physics');
         this.em.addSystem(new Orientate(), 'Physics');
         this.em.addSystem(new DetectCollisions(), 'Physics');
@@ -108,10 +206,10 @@ export class Application {
         // Main player
         this.em.addEntity([
             new Ship(),
-            new Speed(7),
-            new Position(new Vect2D(600, 400)),
+            new Speed(speedRT),
+            new Position(new Vect2D(620, 420)),
             new Velocity(new Vect2D(1, 0)),
-            new Orientation(0),
+            new Orientation(90),
             new Radar(sizeCell, wArea / sizeCell, hArea / sizeCell),
             new RigidBody(20), //20 is the radius of the rigid body
             new Score()
@@ -274,17 +372,17 @@ export class Application {
             let rewardScore = 0;
 
             if ((score - prevScore) > 0) { // previous beacon has been picked up
-                return 1;
+                return score;
             }
             else {
-                return 0 //radarRedReward; //(posShip.position.distance(prevPos)) / 7;
+                return 0; //radarRedReward; //(posShip.position.distance(prevPos)) / 7;
             }
 
             //return rewardOrientation + (score - prevScore); //used as recompense
             // return rewardTravel + rewardScore;
         }
         else {
-            return game.isSuccess() ? 10 : -1; //all beacons have been picked or ship is dead...
+            return game.isSuccess() ? 10 : -10; //all beacons have been picked or ship is dead...
         }
     }
 
@@ -343,7 +441,7 @@ export class Application {
         let st = this.buildWorldState();
         let st2;
 
-        for (let epi=0; epi < 150; epi++){
+        for (let epi=0; epi < 1500; epi++){
             let step = 0;
             let deadStep = null;
             let victoryStep = null;
@@ -352,14 +450,13 @@ export class Application {
             let score = 0;
             let totalReward = 0;
 
-            const rewardForDeath = -1;
+            const rewardForDeath = -10;
             const rewardForVictory = 10;
-
-            while (step < 1200 && reward != rewardForDeath && reward != rewardForVictory) {
+            while (step < 600 && reward != rewardForDeath && reward != rewardForVictory) {
                 // pick an action
                 let act = agent.pickAction(st, eps);
 
-                const directions = ['left', 'right', 'straignt'];
+                const directions = ['left', 'right', 'straight'];
                 reward = this.step(directions[act]);
                 totalReward += reward;
 
@@ -401,7 +498,7 @@ export class Application {
             console.log(`game score: ${score}, dead at step: ${deadStep}, victory at step: ${victoryStep}, total reward: ${totalReward}`);
 
             // Decrease epsilon
-            eps = Math.max(0.1, eps*0.995);
+            eps = Math.max(0.1, eps*0.998);
 
             // Train model every 5 episodes
             if (epi % 5 == 0){
@@ -428,7 +525,7 @@ export class Application {
 
             // Shuffle the env
             this.resetApplication();
-            this.init();
+            this.init(this.isTurnBased);
         }
 
         console.log('Congrats ! training terminated');
@@ -437,16 +534,18 @@ export class Application {
     private registerHumanAction(e: KeyboardEvent) {
 
         const inputs = gApplication.em.selectGlobal('inputs')?.get('Inputs') as Inputs;
-        if (e.keyCode === 37) {
+        if (e.keyCode == 37) {
             inputs.addInput('left');
+            gApplication.em.addComponents('inputs', inputs);
         }
-        else if (e.keyCode === 39) {
+        else if (e.keyCode == 39) {
             inputs.addInput('right');
+            gApplication.em.addComponents('inputs', inputs);
         }
-        else {
+        else if (e.keyCode == 38) {
             inputs.addInput('straight');
+            gApplication.em.addComponents('inputs', inputs);
         }
-        gApplication.em.addComponents('inputs', inputs);
     }
 
     private getAgentAction(worldState: WorldState): void {
@@ -467,6 +566,7 @@ export class Application {
         const isRunning = game.isRunning() ? 1 : 0;
 
         if (isRunning) {
+            const area = this.em.selectGlobal('area')?.get('Area') as Area;
             let entities = this.em.select(['Radar', 'Position', 'Orientation', 'Velocity', 'Ship']);
             let ship = new Position(new Vect2D(0,0));
             for (let [entity, componentsMap] of entities.entries()) {
@@ -480,12 +580,25 @@ export class Application {
                 let head = ori.heading;
                 head.normalize();
 
-
-
                 // radar vision, delta angle to target, current ship position, current ship orientation, dead?
                 //worldState.state = [...radar.state, Math.round(ori.angle)];
                 //worldState.state = [...radar.state, Math.round(radar.direction||0), Math.round(ship.pos.x), Math.round(ship.pos.y), head.x, head.y];
-                worldState.state = [...radar.state, normVel.x, normVel.y];
+
+                const x = Math.floor(ship.position.x / 40);
+                const y = Math.floor(ship.position.y / 40);
+                const indexShipArea = y * area.widthMap + x;
+
+                const indexBeacons = Array<number>(10).fill(-1);
+                let index = 0;
+                for (let i = 0; i < radar.state.length; i++)
+                {
+                    if (radar.state[i] == 1) {
+                        indexBeacons[index] = 1;
+                        index++;
+                    }
+                }
+
+                worldState.state = [...indexBeacons, indexShipArea, Math.round(ori.angle), vel.velocity.x, vel.velocity.y];
             }
 
             /*
@@ -507,7 +620,9 @@ export class Application {
            */
         }
         else {
-            worldState.state = Array<number>(600).fill(-1);
+            worldState.state = Array<number>(10).fill(-1);
+            worldState.state.push(-1);
+            worldState.state.push(-1);
             worldState.state.push(-1);
             worldState.state.push(-1);
         }

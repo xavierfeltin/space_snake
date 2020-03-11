@@ -7,7 +7,7 @@ export class BasicAgent implements Agent {
 
     private model: tf.LayersModel;
     private model_optimizer: tf.AdamOptimizer;
-    private nbInputs = 602; //25 radar + orientation
+    private nbInputs = 14; //25 radar + orientation
     private nbActions = 3;
 
     constructor() {
@@ -15,8 +15,8 @@ export class BasicAgent implements Agent {
         // Input
         const input = tf.input({batchShape: [null, this.nbInputs]});
         // Hidden layer        ;
-        const layer1 = tf.layers.dense({useBias: true, units: 512, activation: 'relu'}).apply(input);
-        const layer = tf.layers.dense({useBias: true, units: 128, activation: 'relu'}).apply(layer1);
+        const layer1 = tf.layers.dense({useBias: true, units: 32, activation: 'relu'}).apply(input);
+        const layer = tf.layers.dense({useBias: true, units: 32, activation: 'relu'}).apply(layer1);
         // Output layer
         const output = tf.layers.dense({useBias: true, units: this.nbActions, activation: 'linear'}).apply(layer) as tf.SymbolicTensor;
         // Create the model
@@ -105,11 +105,5 @@ export class BasicAgent implements Agent {
             st_tensor.dispose();
             return act;
         }
-    }
-
-    public exploit(world: WorldState): string {
-        const actions = ['left', 'right'];
-        const index =  Math.floor(Math.random() * 2);
-        return actions[index];
     }
 }
