@@ -31,8 +31,9 @@ export class TurnMove implements System<UpdateContext> {
         const angle = this.turn(orientation.angle, rotation.angle);
         const heading = this.computeHeading(angle);
         const vel = this.computeVelocity(heading, speed.value);
-        const pos = this.move(position.pos, vel);
+        const pos = this.move(position.position, vel);
 
+        orientation.angle = angle;
         orientation.heading = heading;
         velocity.velocity = vel;
         position.position = pos;
@@ -46,7 +47,8 @@ export class TurnMove implements System<UpdateContext> {
   }
 
   private turn(angle: number, delta: number): number {
-    return (angle + delta) % 360;
+    //return (angle + delta) % 360;
+    return delta % 360;
   }
 
   private computeHeading(angle: number): Vect2D {

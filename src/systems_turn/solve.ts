@@ -14,15 +14,19 @@ export class TurnSolve implements System<UpdateContext> {
       for (let input of inputs.inputs)
       {
         if (input === 'left') {
-          const turnLeftComponent = new TurnAction(-90);
+          const turnLeftComponent = new TurnAction(180);
           em.addComponents(entity, turnLeftComponent);
         }
         else if (input === 'right') {
-          const turnRightComponent = new TurnAction(90);
+          const turnRightComponent = new TurnAction(0);
           em.addComponents(entity, turnRightComponent);
         }
-        else if ((input === 'straight')) {
-          const moveForwardComponent = new TurnAction(0);
+        else if ((input === 'up')) {
+          const moveForwardComponent = new TurnAction(270);
+          em.addComponents(entity, moveForwardComponent);
+        }
+        else if ((input === 'down')) {
+          const moveForwardComponent = new TurnAction(90);
           em.addComponents(entity, moveForwardComponent);
         }
       }

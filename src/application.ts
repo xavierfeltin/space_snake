@@ -543,7 +543,11 @@ export class Application {
             gApplication.em.addComponents('inputs', inputs);
         }
         else if (e.keyCode == 38) {
-            inputs.addInput('straight');
+            inputs.addInput('up');
+            gApplication.em.addComponents('inputs', inputs);
+        }
+        else if (e.keyCode == 40) {
+            inputs.addInput('down');
             gApplication.em.addComponents('inputs', inputs);
         }
     }
