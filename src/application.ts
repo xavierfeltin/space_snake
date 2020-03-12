@@ -546,10 +546,6 @@ export class Application {
             inputs.addInput('up');
             gApplication.em.addComponents('inputs', inputs);
         }
-        else if (e.keyCode == 40) {
-            inputs.addInput('down');
-            gApplication.em.addComponents('inputs', inputs);
-        }
     }
 
     private getAgentAction(worldState: WorldState): void {

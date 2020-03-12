@@ -47,8 +47,8 @@ export class TurnMove implements System<UpdateContext> {
   }
 
   private turn(angle: number, delta: number): number {
-    //return (angle + delta) % 360;
-    return delta % 360;
+    return (angle + delta) % 360;
+    //return delta % 360;
   }
 
   private computeHeading(angle: number): Vect2D {
