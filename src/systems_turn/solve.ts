@@ -21,7 +21,7 @@ export class TurnSolve implements System<UpdateContext> {
           const turnRightComponent = new TurnAction(-90);
           em.addComponents(entity, turnRightComponent);
         }
-        else if ((input === 'up')) {
+        else if ((input === 'straight')) {
           const moveForwardComponent = new TurnAction(0);
           em.addComponents(entity, moveForwardComponent);
         }

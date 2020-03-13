@@ -7,7 +7,7 @@ export class BasicAgent implements Agent {
 
     private model: tf.LayersModel;
     private model_optimizer: tf.AdamOptimizer;
-    private nbInputs = 14; //25 radar + orientation
+    private nbInputs = 201; //25 radar + orientation
     private nbActions = 3;
 
     constructor() {

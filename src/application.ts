@@ -62,6 +62,9 @@ export class Application {
 
     // agent
     private agent: Agent | null = null;
+    private deltaAgent: number;
+    private thenAgent: number;
+    private intervalAgent: number;
 
     // training
     public trainMeans: number[] = [];
@@ -78,7 +81,12 @@ export class Application {
         this.sizeRadar = 5;
         this.em = new EntityManager<UpdateContext>();
         this.canvas2D = null;
+
         this.isTurnBased = false;
+        this.deltaAgent = 0;
+        this.thenAgent = 0;
+        this.intervalAgent = 1000;
+
         gApplication = this;
     }
 
@@ -96,13 +104,15 @@ export class Application {
     }
 
     private initByTurn(): void {
-        const wArea = 1200;
-        const hArea = 800;
+        const wAreaCells = 20;
+        const hAreaCells = 10;
         const sizeCell = 40;
-        const speedByCell = 40;
+        const speedByCell = sizeCell;
+        const wArea = wAreaCells * sizeCell;
+        const hArea = hAreaCells * sizeCell;
 
         if (this.canvas2D) {
-            this.canvas2D.clearRect(0, 0, 1200, 800);
+            this.canvas2D.clearRect(0, 0, wArea, hArea);
         }
 
         this.em.clearAll();
@@ -125,11 +135,13 @@ export class Application {
         this.em.addSystem(new ManageGame, 'State');
 
         // Main player
+        const startX = (wAreaCells / 2) * sizeCell + sizeCell  /2;
+        const startY = (hAreaCells / 2) * sizeCell + sizeCell  /2;
         this.em.addEntity([
             new Ship(),
             new Speed(speedByCell),
-            new Position(new Vect2D(620, 420)),
-            new Velocity(new Vect2D(1, 0)),
+            new Position(new Vect2D(startX, startY)),
+            new Velocity(new Vect2D(0, 0)),
             new Orientation(90),
             new Radar(sizeCell, wArea / sizeCell, hArea / sizeCell),
             new RigidBody(20), //20 is the radius of the rigid body
@@ -137,19 +149,18 @@ export class Application {
         ]);
 
         // these ones will be static
+        const beaconsCells = [2,15,28,85,120,147,178];
         const beacons = [];
-        beacons.push(new Vect2D(900, 500));
-        beacons.push(new Vect2D(900, 200));
-        beacons.push(new Vect2D(1000, 700));
-        beacons.push(new Vect2D(400, 200));
-        beacons.push(new Vect2D(80, 500));
-        beacons.push(new Vect2D(300, 300));
-        beacons.push(new Vect2D(450, 700));
-        beacons.push(new Vect2D(200, 80));
-        beacons.push(new Vect2D(1100, 320));
-        beacons.push(new Vect2D(700, 400));
+        for (let i  = 0; i < beaconsCells.length; i++) {
+            const row = Math.floor(beaconsCells[i] / wAreaCells);
+            const col = beaconsCells[i] - (row * wAreaCells);
+            const x = col * sizeCell + sizeCell / 2;
+            const y = row * sizeCell + sizeCell / 2;
+            const pos = new Vect2D(x, y);
+            beacons.push(pos);
+        }
 
-        for (let i = 0; i < 10; i++) {
+        for (let i = 0; i < beacons.length; i++) {
             this.em.addEntity([
                 new Beacon(),
                 new Position(beacons[i]), //(new Vect2D(50 + Math.random()*1100, 50 + Math.random()*700)),
@@ -441,7 +452,7 @@ export class Application {
         let st = this.buildWorldState();
         let st2;
 
-        for (let epi=0; epi < 1500; epi++){
+        for (let epi=0; epi < 800; epi++){
             let step = 0;
             let deadStep = null;
             let victoryStep = null;
@@ -452,7 +463,7 @@ export class Application {
 
             const rewardForDeath = -10;
             const rewardForVictory = 10;
-            while (step < 600 && reward != rewardForDeath && reward != rewardForVictory) {
+            while (step < 400 && reward != rewardForDeath && reward != rewardForVictory) {
                 // pick an action
                 let act = agent.pickAction(st, eps);
 
@@ -543,7 +554,7 @@ export class Application {
             gApplication.em.addComponents('inputs', inputs);
         }
         else if (e.keyCode == 38) {
-            inputs.addInput('up');
+            inputs.addInput('straight');
             gApplication.em.addComponents('inputs', inputs);
         }
     }
@@ -598,7 +609,8 @@ export class Application {
                     }
                 }
 
-                worldState.state = [...indexBeacons, indexShipArea, Math.round(ori.angle), vel.velocity.x, vel.velocity.y];
+                worldState.state = [...radar.state, indexShipArea];
+                //worldState.state = [...indexBeacons, indexShipArea];
             }
 
             /*
@@ -620,10 +632,7 @@ export class Application {
            */
         }
         else {
-            worldState.state = Array<number>(10).fill(-1);
-            worldState.state.push(-1);
-            worldState.state.push(-1);
-            worldState.state.push(-1);
+            worldState.state = Array<number>(200).fill(0);
             worldState.state.push(-1);
         }
 
@@ -637,17 +646,25 @@ export class Application {
 
             this.now = Date.now();
             this.delta = this.now - this.then;
+            this.deltaAgent = this.now - this.thenAgent;
 
             if (this.delta > this.interval) {
 
                 if (this.agent) {
-                    const worldState = this.buildWorldState();
-                    this.getAgentAction(worldState);
+                    if (this.isTurnBased && this.deltaAgent > this.intervalAgent) {
+                        const worldState = this.buildWorldState();
+                        this.getAgentAction(worldState);
+                        debugger;
+                    } else if (!this.isTurnBased) {
+                        const worldState = this.buildWorldState();
+                        this.getAgentAction(worldState);
+                    }
                 }
 
                 // update time stuffs
                 // From: http://codetheory.in/controlling-the-frame-rate-with-requestanimationframe/
                 this.then = this.now - (this.delta % this.interval);
+                this.thenAgent = this.now - (this.deltaAgent % this.intervalAgent);
 
                 this.em.update({
                     deltaTime: this.interval,
@@ -658,6 +675,10 @@ export class Application {
         }
     }
 
+    private async delay(ms: number) {
+        return new Promise( resolve => setTimeout(resolve, ms) );
+    }
+
     public resetApplication() {
         this.startTime = 0;
         this.now = 0;
@@ -665,5 +686,11 @@ export class Application {
         this.then = 0;
         this.fps = 30;
         this.interval = 1000 / this.fps;
+
+        if (this.agent) {
+            this.deltaAgent = 0;
+            this.thenAgent = 0;
+            this.intervalAgent = 1000;
+        }
     }
 }

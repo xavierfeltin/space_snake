@@ -2,7 +2,7 @@ import { version } from '@tensorflow/tfjs';
 import { Application } from './application';
 import { BasicAgent } from './agents/basic_agent';
 
-function startGame(canvas: HTMLCanvasElement) {
+function startGame(isTurnBased: boolean, canvas: HTMLCanvasElement) {
   if (canvas && canvas.getContext) {
 
     if (!ctx) {
@@ -10,23 +10,23 @@ function startGame(canvas: HTMLCanvasElement) {
     }
 
     if (ctx) {
-      const isTurnBased = true;
       app.resetApplication();
       app.setCanvas(ctx);
       app.init(isTurnBased);
-      //app.addAgent(agent);
+      app.addAgent(agent);
       app.run();
     }
   }
 }
 
-async function startLearning() {
+async function startLearning(isTurnBased: boolean) {
   app.setCanvas(null);
   app.resetApplication();
-  app.init();
+  app.init(isTurnBased);
   await app.train(agent);
 }
 
+const isTurnBased = true;
 const mainDiv = document.querySelector('#main');
 const canvas = document.querySelector('canvas');
 const playButton = document.getElementById("playbutton");
@@ -40,9 +40,9 @@ if (mainDiv) {
 }
 
 if (playButton && canvas) {
-  playButton.addEventListener("click", (e:Event) => startGame(canvas));
+  playButton.addEventListener("click", (e:Event) => startGame(isTurnBased, canvas));
 }
 
 if (learnButton) {
-  learnButton.addEventListener("click", (e:Event) => startLearning());
+  learnButton.addEventListener("click", (e:Event) => startLearning(isTurnBased));
 }
